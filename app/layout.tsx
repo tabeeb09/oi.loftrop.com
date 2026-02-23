@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers/SessionProvider";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import "react-pdf/dist/Page/TextLayer.css";
+import "react-pdf/dist/Page/AnnotationLayer.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,10 +29,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Providers>
+          <div className="app-shell">
+            <Header />
+            <main className="app-main">{children}</main>
+            <Footer />
+          </div>
+        </Providers>
       </body>
     </html>
   );

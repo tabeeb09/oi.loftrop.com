@@ -13,6 +13,14 @@
 # testing
 /coverage
 
+# cv
+/public/pdfs
+
+# NavBar iterations
+/components/VerticalNavBar.tsx
+/components/VerticalNavBar (1).tsx
+/components/VerticalNavBar (1).css
+
 # next.js
 /.next/
 /out/

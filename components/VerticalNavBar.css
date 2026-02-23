@@ -1,0 +1,970 @@
+/*
+ * Styles for the VerticalNavBar component.  Each class corresponds to
+ * elements described in the detailed nav bar specification.  Comments
+ * reference the names of the elements in the plan to aid customisation.
+ */
+
+/* Root container for the nav bar (VerticalNavBar) */
+.nav-container {
+  position: fixed; /* Pin the nav bar to the left side of the viewport */
+  top: 0;
+  left: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #e9e9e9; /* dark background for the sidebar */
+  color: #232324; /* light foreground text */
+  width: var(--nav-width, 16rem); /* width of the expanded sidebar; customise via CSS variable */
+  transition: width 0.3s ease; /* animate width changes when collapsing */
+  font-family: var(--nav-font-family, var(--site-font-family));
+  font-size: var(--nav-font-size, 0.95rem);
+}
+
+/* Collapsed state for the nav bar (hamburger mode) */
+.nav-container.nav-collapsed {
+  width: var(--collapsed-width, 3rem); /* width when only the hamburger button is visible */
+}
+
+/* Top section containing the hamburger icon (top of nav bar) */
+.nav-top {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start; /* keep items left-aligned */
+  gap: 0.5rem;
+  padding: 0.5rem;
+  /* Removed horizontal border for a cleaner appearance */
+}
+
+/* Hamburger button styling */
+.nav-hamburger {
+  font-size: 5rem;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+}
+
+/* Create the hamburger icon lines.  The span within the button draws three horizontal
+   bars using pseudo-elements.  Adjust the width/height to customise the icon size. */
+.nav-hamburger span {
+  position: relative;
+  display: block;
+  width: 1.25rem;
+  height: 0.125rem;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+.nav-hamburger span::before,
+.nav-hamburger span::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 1.25rem;
+  height: 0.125rem;
+  background-color: currentColor;
+  border-radius: 1px;
+}
+.nav-hamburger span::before {
+  top: -0.4rem;
+}
+.nav-hamburger span::after {
+  top: 0.4rem;
+}
+
+/* Animate the hamburger icon when the nav is collapsed.  We rotate
+   the stack of bars to provide a simple visual cue that the sidebar
+   has been toggled. */
+.nav-hamburger span {
+  transition: transform 0.3s ease;
+}
+.nav-container.nav-collapsed .nav-hamburger span {
+  transform: rotate(90deg);
+}
+
+/* Container for all navigational content below the top bar */
+.nav-container {
+  position: fixed; /* Pin the nav bar to the left side of the viewport */
+  top: var(--header-height, 56px); /* sit below the header */
+  left: 0;
+  height: calc(100vh - var(--header-height, 56px));
+}
+
+/* Links for Home and Search entries */
+.nav-home-link,
+.nav-search-link {
+  display: flex;
+  z-index: 20; /* lower than header so header has priority */
+  align-items: center;
+  padding: 0.01rem 0.15rem;
+  /* Removed border-bottom to avoid horizontal separators */
+  text-decoration: none;
+  color: inherit;
+  /* Row spacing for top-level links */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  margin-top: var(--row-vertical-spacing);
+  margin-bottom: var(--row-vertical-spacing);
+}
+.nav-home-link:hover,
+.nav-search-link:hover {
+  background-color: #374151;
+}
+
+/* Final overrides to ensure transforms (not margins) are used for visual nudges,
+   the nav sits below the header and the home icon uses the large size without
+   increasing row height. These rules are intentionally specific and placed
+   last to override earlier duplicates in this stylesheet. */
+.nav-container {
+  top: var(--header-height, 56px) !important;
+  height: calc(100vh - var(--header-height, 56px)) !important;
+  z-index: 20 !important;
+  overflow: hidden !important;
+}
+
+.nav-top {
+  height: var(--header-height, 56px) !important;
+  padding: 0 0.5rem !important;
+  align-items: center !important;
+}
+
+/* Header inner layout used by Header.tsx: three regions (left/center/right)
+   to avoid overlap between left controls and centered title. We keep the
+   rules lightweight so they reuse existing variables and alignment rules. */
+/* Header container becomes a 3-column grid */
+/* ===== Header layout (grid) ===== */
+.app-header .header-inner {
+  display: grid;
+  grid-template-columns: auto 1fr auto; /* left | center | right */
+  align-items: center;
+  height: 100%;
+  column-gap: 0.75rem;
+}
+
+/* Regions */
+
+.app-header .header-left {
+  justify-self: start;          /* grid alignment: stick to right edge */
+  display: flex;
+  justify-content: flex-start;  /* flex alignment inside */
+  gap: -0.5rem;
+  flex-wrap: wrap;
+}
+
+.app-header .header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Center title */
+.app-header .header-center {
+  justify-content: center;
+  text-align: center;
+  min-width: 0;
+}
+
+/* Right buttons: flush-right */
+.app-header .header-right {
+  justify-self: end;          /* grid alignment: stick to right edge */
+  display: flex;
+  justify-content: flex-end;  /* flex alignment inside */
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ===== Mobile: stack to avoid overlap ===== */
+@media (max-width: 576px) {
+  .app-header .header-inner {
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    row-gap: 0.5rem;
+  }
+
+.app-header .header-center {
+  justify-content: flex-start;
+  text-align: left;
+  min-width: 0;
+}
+  .app-header .header-right {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: stretch;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.nav-home-link img,
+.nav-search-link img {
+  display: inline-block;
+  vertical-align: middle;
+  transform: translateY(var(--icon-y-offset, 0));
+  width: var(--home-icon-size, 24px);
+  height: var(--home-icon-size, 24px);
+  max-width: var(--home-icon-size, 24px);
+  max-height: var(--home-icon-size, 24px);
+  object-fit: contain;
+  margin: 0;
+}
+
+/* Allow home icon to be larger than other icons by setting the variable
+   on the container or via inline style. Example: `--home-icon-size: 64px`. */
+.nav-home-link img {
+  width: var(--home-icon-size, 48px);
+  height: var(--home-icon-size, 48px);
+  max-width: var(--home-icon-size, 48px);
+  max-height: var(--home-icon-size, 48px);
+}
+
+/* Collapsed sidebar icon strip (vertical) */
+.nav-collapsed-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+.nav-collapsed-button {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  width: 100%;
+}
+.nav-collapsed-button:focus {
+  outline: 2px solid rgba(59,130,246,0.6);
+  outline-offset: 2px;
+}
+.nav-collapsed-icon {
+  display: block;
+  width: var(--collapsed-icon-size, 24px);
+  height: var(--collapsed-icon-size, 24px);
+}
+
+/* Profile panel container */
+.nav-profile {
+  /* Removed border-bottom for cleaner look */
+}
+.nav-profile-header {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  /* Row spacing for profile header */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  margin-top: var(--row-vertical-spacing);
+  margin-bottom: var(--row-vertical-spacing);
+}
+.nav-profile-header:hover {
+  background-color: #374151;
+}
+
+/* Allow small vertical nudges for profile/header labels without changing layout height */
+.nav-profile-header .nav-node-name,
+.nav-profile-toggle .nav-node-name {
+  display: inline-block;
+  transform: translateY(var(--profile-text-y-offset, 2px));
+}
+.nav-profile-sub {
+  display: flex;
+  flex-direction: column;
+  padding-left: 1rem; /* indent profile sub links */
+}
+.nav-profile-sub a {
+  padding: 0.25rem 0;
+  color: inherit;
+  text-decoration: none;
+  /* Row spacing for profile sub-links */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  margin-top: var(--row-vertical-spacing);
+  margin-bottom: var(--row-vertical-spacing);
+}
+.nav-profile-sub a:hover {
+  text-decoration: underline;
+}
+
+/* Current Active Spaces panel (CAS panel) */
+.nav-cas-panel {
+  display: flex;
+  flex-direction: column;
+  /* Removed border-bottom for cleaner look */
+  flex: 1;
+}
+.nav-cas-title {
+  padding: 0.5rem 0.75rem;
+  font-weight: bold;
+  font-size: 0.875rem; /* 14px */
+}
+.nav-cas-list {
+  flex: 1;
+  overflow-y: auto; /* scrollable list of pinned spaces */
+}
+
+/* Each pinned space root container */
+.nav-space {
+  display: block;
+}
+
+/* Node row styling (for each node and page/resource entry).
+   We use padding-top/bottom rather than vertical margins so that
+   vertical connector lines (drawn with ::before) can span the full
+   height of adjacent rows without interruption.  Horizontal margins
+   remain to inset the entire row from the left and right edges of
+   the sidebar. */
+.nav-node {
+  display: flex;
+  align-items: center;
+  font-size: 7.5rem; /* 14px */
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  /* Vertical spacing inside the row; adjust via CSS variable to
+     control spacing between rows.  This ensures the vertical
+     connector lines remain continuous between siblings. */
+  padding-top: var(--row-vertical-spacing);
+  padding-bottom: var(--row-vertical-spacing);
+  padding-right: 0.5rem;
+  /* Indentation for nested nodes.  The --depth CSS variable is
+     provided by the component for each row via inline style and
+     multiplied by --node-indent to compute how far the content
+     indents from the left edge.  Adjust --node-indent in :root to
+     control the indentation distance. */
+  padding-left: calc(var(--depth) * var(--node-indent));
+}
+.nav-node:hover {
+  background-color: #374151;
+}
+.nav-node-selected {
+  background-color: #4b5563; /* highlight the selected node */
+}
+
+/* Text area for node names; truncated if too long */
+.nav-node-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* When hovering over a long node name the text should scroll from right
+   to left.  The nav-node-marquee class is applied by the component
+   while the hover is active. */
+/* When a long node is hovered, we apply this class to the name span so that
+   the full name scrolls horizontally.  We disable the text ellipsis and
+   animate the entire text.  You can adjust the animation duration via
+   the --marquee-duration variable in :root. */
+.nav-node-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  animation: nav-marquee var(--marquee-duration, 8s) linear infinite;
+}
+
+/* Container for icons on node rows */
+.nav-node-icons {
+  display: flex;
+  align-items: center;
+}
+.nav-node-icon-button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 7.5rem; /* smaller icons */
+  margin-left: 0.25rem;
+}
+
+/* Additional action buttons under selected node (Add child/page/resource) */
+.nav-add-actions {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--add-action-font-size, 0.65rem);
+  /* Use padding for vertical spacing so that the vertical connector
+     lines drawn via ::before on this row remain continuous with
+     adjacent rows.  Remove vertical margins. */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  padding-top: var(--row-vertical-spacing);
+  padding-bottom: var(--row-vertical-spacing);
+
+  position: relative; /* allow ::before positioning */
+  /* Indent add-action rows according to depth.  This aligns the
+     content and vertical connector within the subtree. */
+  padding-left: calc(var(--depth) * var(--node-indent));
+}
+.nav-add-action-button {
+  background: none;
+  border: none;
+  color: var(--add-action-color, #6b7280);
+  cursor: pointer;
+  text-align: left;
+  padding: 0.25rem 0;
+}
+.nav-add-action-button:hover {
+  color: var(--add-action-hover-color, #93c5fd);
+}
+
+/* Row for creating child/node/page/resource with an input box */
+.nav-create-row {
+  display: flex;
+  flex-direction: column;
+  font-size: 7.5rem;
+  /* Remove vertical margins and use padding for continuous connector lines */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  padding-top: var(--row-vertical-spacing);
+  padding-bottom: var(--row-vertical-spacing);
+  position: relative;
+  /* Indent create rows according to depth. */
+  padding-left: calc(var(--depth) * var(--node-indent));
+}
+.nav-create-input {
+  background-color: #1f2937;
+  border: 1px solid #374151;
+  color: inherit;
+  padding: 0.25rem 0.5rem;
+
+/* Lightweight button styles to emulate Bootstrap outline buttons
+   without adding the dependency. These support the classes used by
+   `HeaderButton` (e.g. btn, btn-outline-primary). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  background-color: transparent;
+  color: inherit;
+}
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.15rem rgba(59,130,246,0.15);
+}
+.rounded-pill {
+  border-radius: 999px;
+}
+.rounded {
+  border-radius: 0.25rem;
+}
+.btn-outline-primary {
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+.btn-outline-primary:hover {
+  background-color: rgba(13,110,253,0.06);
+}
+.btn-outline-secondary {
+  border-color: #6c757d;
+  color: #6c757d;
+}
+.btn-outline-secondary:hover {
+  background-color: rgba(108,117,125,0.06);
+}
+.btn-outline-dark {
+  border-color: #343a40;
+  color: #343a40;
+}
+.btn-outline-dark:hover {
+  background-color: rgba(52,58,64,0.06);
+}
+
+/* Header-specific adjustments for spacing and right alignment */
+.app-header .header-right {
+  justify-content: flex-end !important;
+  gap: 0.5rem;
+  padding-right: var(--header-horizontal-padding, 1rem);
+}
+.header-btn {
+  padding: 0.25rem 0.6rem;
+  font-weight: 600;
+}
+  border-radius: 0.25rem;
+}
+.nav-create-buttons {
+  display: flex;
+  margin-top: 0.25rem;
+}
+.nav-create-buttons button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 7.5rem;
+  margin-right: 0.5rem;
+}
+.nav-create-add {
+  color: #10b981;
+}
+.nav-create-add:hover {
+  color: #6ee7b7;
+}
+.nav-create-cancel {
+  color: #ef4444;
+}
+.nav-create-cancel:hover {
+  color: #fca5a5;
+}
+
+/* Tooltip for showing full node names when truncated */
+.nav-tooltip {
+  position: fixed;
+  background-color: #000000;
+  color: #ffffff;
+  border: 1px solid #ffffff;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 7.5rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9999;
+  max-width: 200px;
+  overflow: hidden;
+}
+/* The tooltip simply displays the full node name without animation. */
+.nav-tooltip .scrolling-text {
+  display: inline-block;
+  white-space: nowrap;
+}
+@keyframes nav-marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    /* Move the entire length of the element to the left so that the end of
+       the text scrolls into view.  Because the element's width is
+       determined by its content (white-space: nowrap), translating -100%
+       will reveal the full string. */
+    transform: translateX(-100%);
+  }
+}
+
+/*
+ * Icon styling.  Icons are controlled via CSS variables so that their
+ * appearance can be overridden without modifying the component code.
+ * You can change the characters in :root to swap out icons or adjust
+ * their order and placement using flex order.
+ */
+
+:root {
+  --icon-toggle-collapsed: "▶";
+  --icon-toggle-expanded: "▼";
+  --icon-public-false: "🚫";
+  --icon-public-true: "👁";
+  --icon-delete: "🗑";
+  --icon-remove: "❌";
+  --icon-editor: "🪄";
+  --icon-home: "🏠";
+  --icon-search: "🔍";
+  --icon-add-child: "➕";
+  --icon-add-page: "📄";
+  --icon-add-resource: "📎";
+  /* Adjust the following orders to reposition icons within the node row */
+  --order-toggle: 1;
+  --order-name: 2;
+  --order-editor: 3;
+  --order-icons: 4;
+  --order-public: 1;
+  --order-delete: 2;
+  --order-remove: 3;
+
+  /* The following variables control the icons used for the add actions.  You can
+     override them to customise the appearance of the "Add child", "Add page"
+     and "Upload resource" buttons without touching the component code. */
+  --icon-add-child-label: "➕";
+  --icon-add-page-label: "📄";
+  --icon-add-resource-label: "📎";
+  /* Define the default indentation for child nodes.  Components use the
+     INDENT_SIZE constant to calculate indentation, but you can also
+     override this value in CSS to control spacing. */
+  --node-indent: 1rem;
+
+  /* Customisation for nav row spacing.  Adjust these variables to control
+     how far each row is inset from the left and right edges of the
+     sidebar, and how much vertical space separates each row.  These
+     values affect home/search links, profile items, nodes, create rows,
+     collaborator actions and the sign-out button. */
+  --row-horizontal-margin: 0.25rem;
+  --row-vertical-spacing: 0.0625rem;
+  /* Font customization for the nav */
+  --nav-font-family: var(--site-font-family);
+  --nav-font-size: 0.95rem;
+
+  /* Duration for the marquee scrolling animation of long node names. */
+  --marquee-duration: 8s;
+
+  /* Icons for leaf nodes: pages and resources.  These values control the
+     small glyph that appears to the left of page and resource names. */
+  --icon-page: "📄";
+  --icon-resource: "📎";
+
+  /* Customisation for the helper (add) action row.  You can adjust
+     the font size and colour to make these helper actions less
+     prominent. */
+  --add-action-font-size: 6.5rem;
+  --add-action-color: #6b7280;
+  --add-action-hover-color: #93c5fd;
+
+  /* Offset for the start and end of vertical connector lines in the
+     tree.  Increase this value to shorten the lines at the top and
+     bottom of each node row; decrease to lengthen the lines. */
+  --vertical-line-offset: 0.1rem;
+}
+
+/* Generic icon button base */
+.nav-node-icon-button,
+.icon-toggle,
+.icon-editor,
+.icon-public,
+.icon-delete,
+.icon-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 7.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+}
+
+/* Placeholder for toggle when node has no children.  Maintains the
+   width of the toggle icon without rendering any content. */
+.icon-toggle-placeholder {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  margin-right: 0.25rem;
+  visibility: hidden;
+}
+
+/* Toggle icon.  The content switches based on the data-expanded attribute. */
+.icon-toggle {
+  order: var(--order-toggle);
+  margin-right: 0.25rem;
+  width: 1rem;
+}
+.icon-toggle::before {
+  content: var(--icon-toggle-collapsed);
+}
+.icon-toggle[data-expanded="true"]::before {
+  content: var(--icon-toggle-expanded);
+}
+
+/* Editor wand indicator shown on editable nodes. */
+.icon-editor {
+  order: var(--order-editor);
+  margin-left: 0.25rem;
+  width: 1rem;
+}
+.icon-editor::before {
+  content: var(--icon-editor);
+}
+
+/* Public toggle icon.  The icon changes based on the data-public state. */
+.icon-public {
+  order: var(--order-public);
+  width: 1rem;
+}
+.icon-public::before {
+  content: var(--icon-public-false);
+}
+.icon-public[data-public="true"]::before {
+  content: var(--icon-public-true);
+}
+
+/* Delete icon */
+.icon-delete {
+  order: var(--order-delete);
+  width: 1rem;
+}
+.icon-delete::before {
+  content: var(--icon-delete);
+}
+
+/* Remove (X) icon for non-editable roots */
+.icon-remove {
+  order: var(--order-remove);
+  width: 1rem;
+}
+.icon-remove::before {
+  content: var(--icon-remove);
+}
+
+/* Container for the icons on each node row.  Flex properties allow
+   reordering via the --order-* variables. */
+.nav-node-icons {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.25rem;
+}
+
+/* Collaborator action buttons */
+.nav-collab-action-button {
+  background: none;
+  border: none;
+  color: #60a5fa; /* blue accent */
+  cursor: pointer;
+  font-size: 7.5rem;
+  text-align: left;
+  padding: 0.25rem 0;
+  /* Row spacing for collaborator actions */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  margin-top: var(--row-vertical-spacing);
+  margin-bottom: var(--row-vertical-spacing);
+}
+
+/* Classes for add action buttons.  Each button uses the appropriate icon
+   defined via CSS variables.  The ::before pseudo-element displays the
+   icon with a margin to the right of it.  Adjust the variables in
+   :root to swap icons. */
+.nav-add-child::before {
+  content: var(--icon-add-child-label);
+  margin-right: 0.25rem;
+}
+.nav-add-page::before {
+  content: var(--icon-add-page-label);
+  margin-right: 0.25rem;
+}
+.nav-add-resource::before {
+  content: var(--icon-add-resource-label);
+  margin-right: 0.25rem;
+}
+
+/* Leaf icons for page and resource nodes.  These appear before the
+   node name in page and resource rows. */
+.icon-page-leaf::before {
+  content: var(--icon-page);
+  margin-right: 0.25rem;
+}
+.icon-resource-leaf::before {
+  content: var(--icon-resource);
+  margin-right: 0.25rem;
+}
+
+/* Home and search icons – used in the top-level navigation links. */
+.icon-home::before {
+  content: var(--icon-home);
+  margin-right: 0.5rem;
+}
+.icon-search::before {
+  content: var(--icon-search);
+  margin-right: 0.5rem;
+}
+.nav-collab-action-button:hover {
+  color: #93c5fd;
+}
+
+/* Container for the sign out button pinned to the bottom */
+.nav-signout {
+  /* No border so that the sign-out button blends with the other rows */
+  border-top: none;
+  padding: 0.5rem 0.75rem;
+  margin-top: auto; /* pushes the sign out button to the bottom of the column */
+  /* Row spacing for sign out button */
+  margin-left: var(--row-horizontal-margin);
+  margin-right: var(--row-horizontal-margin);
+  margin-bottom: var(--row-vertical-spacing);
+}
+
+/* Note: The CSS variables --collapsed-width and --nav-width define the
+   collapsed and expanded widths of the sidebar.  Adjust these values in
+   :root to customise how much horizontal space the hamburger takes up when
+   collapsed or expanded.  The --node-indent variable defines how far each
+   nested node indents from its parent. */
+
+/*
+ * Visual guide lines for tree structure.
+ * Each nav-node receives a CSS variable --depth from the component.  We use
+ * this variable to position a vertical line that connects siblings in the
+ * same level.  The line is drawn via the ::before pseudo-element on each
+ * row except the last sibling (which has class nav-node-last).  This
+ * approximates the file-tree vertical connectors.
+ */
+.nav-node {
+  position: relative;
+}
+.nav-node::before {
+  content: "";
+  position: absolute;
+  /* The vertical connector line extends almost the full height of the
+     row to visually group sibling nodes beneath their parent.  The
+     offset variables allow you to customise the spacing at the top
+     and bottom of the line.  Set these to small values (e.g. 0.1rem)
+     or zero for full-height lines. */
+  /* Extend the connector to the full height of the row by default.
+     Adjust --vertical-line-offset in :root to shorten the line at
+     both ends. */
+  top: var(--vertical-line-offset, 0);
+  bottom: var(--vertical-line-offset, 0);
+  /* Position the vertical line midway through the indent area.  We
+     subtract half an indent step so that the line falls within the
+     margin/indent void created by padding-left rather than over the
+     text.  The row-horizontal-margin accounts for the left inset
+     applied to every row. */
+  left: calc(var(--row-horizontal-margin) + (var(--depth) - 0.5) * var(--node-indent));
+  border-left: 1px solid #374151;
+  pointer-events: none;
+}
+/* Draw the vertical line for all nodes, including the last child, to
+   maintain a continuous connector outside the indent area.  If you
+   prefer to hide the line for the last child, you can override this
+   selector to set border-left: none.  Note: we intentionally leave
+   the selector empty here so the border-left remains active. */
+.nav-node-last::before {
+}
+
+/* For root-level nodes (depth = 0), do not draw a vertical connector.  The
+   component adds the class nav-node-root to identify these rows. */
+.nav-node-root::before {
+  border-left: none;
+}
+
+/* Draw a vertical connector on add-action rows to keep the scope line
+   continuous.  These rows have a --depth CSS variable set via the
+   component.  The line sits midway through the indent between this
+   row and its parent by subtracting half an indent step.  We set
+   top/bottom offsets to 0 by default for a continuous line; adjust
+   --vertical-line-offset in :root to shorten the line relative to
+   the row height. */
+.nav-add-actions::before {
+  content: "";
+  position: absolute;
+  top: var(--vertical-line-offset, 0);
+  bottom: var(--vertical-line-offset, 0);
+  left: calc(var(--row-horizontal-margin) + (var(--depth) - 0.5) * var(--node-indent));
+  border-left: 1px solid #374151;
+  pointer-events: none;
+}
+
+/* Draw a vertical connector on create rows to keep the scope line
+   continuous.  These rows use the --depth CSS variable set via the
+   component.  The connector uses the same positioning formula as
+   .nav-add-actions::before. */
+.nav-create-row::before {
+  content: "";
+  position: absolute;
+  top: var(--vertical-line-offset, 0);
+  bottom: var(--vertical-line-offset, 0);
+  left: calc(var(--row-horizontal-margin) + (var(--depth) - 0.5) * var(--node-indent));
+  border-left: 1px solid #374151;
+  pointer-events: none;
+}
+
+/* Right-click context menu.  This floating menu appears when the user
+   right-clicks on a node.  It contains options to add collaborators.
+   You can adjust padding, colours and border-radius here. */
+.nav-context-menu {
+  position: fixed;
+  background-color: #1f2937;
+  color: #e5e7eb;
+  border: 1px solid #374151;
+  border-radius: 0.25rem;
+  padding: 0.25rem 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  min-width: 8rem;
+}
+.nav-context-item {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0.25rem 0.75rem;
+  text-align: left;
+  font-size: 7.5rem;
+  cursor: pointer;
+}
+.nav-context-item:hover {
+  background-color: rgba(55, 65, 81, 0.6);
+}
+
+/*
+ * Rounded corners and transparency.
+ * These rules give the sidebar and its elements softer edges and
+ * semi-transparent highlights for a more modern look.  You can tweak
+ * the border-radius and rgba values to suit your theme.
+ */
+.nav-container {
+  /* The container itself has square corners; individual rows are rounded below. */
+  overflow: hidden;
+}
+.nav-top,
+.nav-home-link,
+.nav-search-link,
+.nav-profile-header,
+.nav-profile-sub a,
+.nav-node,
+.nav-create-row,
+.nav-add-actions,
+.nav-collab-action-button,
+.nav-signout {
+  border-radius: 0.25rem;
+}
+/* Semi-transparent highlight for selected node */
+.nav-node-selected {
+  background-color: rgba(107, 114, 128, 0.7);
+}
+/* Semi-transparent hover state for non-selected nodes */
+.nav-node:hover:not(.nav-node-selected) {
+  background-color: rgba(55, 65, 81, 0.6);
+}
+/* Hover states for other clickable items */
+.nav-home-link:hover,
+.nav-search-link:hover,
+.nav-profile-header:hover,
+.nav-profile-sub a:hover,
+.nav-add-action-button:hover,
+.nav-collab-action-button:hover {
+  background-color: rgba(55, 65, 81, 0.6);
+}
+
+/* Force header to span full page width */
+header.app-header {
+  display: block;
+  width: 100%;
+  max-width: none;
+}
+
+/* Force the grid wrapper to span full header width */
+header.app-header > .header-inner {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+/* If your page layout uses padding, keep it inside the full-width header */
+header.app-header > .header-inner {
+  padding-left: 0;   /* adjust or remove */
+  padding-right: 0;  /* adjust or remove */
+}
+
+/* Optional: if some parent is constraining width via fit-content/inline-block */
+header.app-header,
+header.app-header > .header-inner {
+  min-width: 0;
+}
+
+header.app-header {
+  background-color: #ffffff;  /* or your theme color */
+  backdrop-filter: blur(6px);          /* slight transparency for modern look */
+  z-index: 1000;              /* ensure it sits above body content */
+}

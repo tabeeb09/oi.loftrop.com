@@ -2,7 +2,11 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: rgba(0,0,0,0.9);
+  --nav-width: 16rem;
+  --collapsed-width: 3rem;
+  --header-height: 56px;
+  --site-font-family: "Times New Roman", Times, serif;
 }
 
 @theme inline {
@@ -14,13 +18,160 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --foreground: rgba(255,255,255,0.9);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--site-font-family);
+}
+
+/* Force site font globally to avoid component-level overrides */
+html, body, #__next {
+  font-family: var(--site-font-family) !important;
+  margin: 0;
+  padding: 0;
+  overflow-x: visible; /* kill browser-level horizontal scrollbar */
+}
+:root{
+  --nav-width: 16rem;
+  --collapsed-width: 3rem;
+  --header-height: 56px;
+}
+
+/* Whole page takes full viewport height */
+/* --- Main content offset follows nav width on desktop --- */
+.app-shell {
+  --nav-current-width: var(--nav-width);
+}
+
+.app-shell:has(.nav-container.nav-collapsed) {
+  --nav-current-width: var(--collapsed-width);
+}
+
+.app-main {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  /* reserve space for sidebar on desktop */
+  margin-left: var(--collapsed-width);
+  width: calc(100vw);
+  /* transition: margin-left 0.3s ease, width 0.3s ease; */
+
+  /* keep your existing header offset */
+  padding-top: var(--header-height);
+}
+
+/* --- Narrow screens: expanded sidebar overlays content instead of shrinking it --- */
+@media (max-width: 900px) {
+  /* default mobile state: content only reserves the collapsed strip */
+  .app-main {
+    margin-left: var(--collapsed-width);
+    width: calc(100vw - var(--collapsed-width));
+  }
+
+  /* when sidebar is expanded, it overlays instead of pushing content */
+  .app-shell:has(.nav-container:not(.nav-collapsed)) .app-main {
+    margin-left: 10vw;
+    
+  }
+
+  /* keep expanded nav on top of content */
+  .nav-container:not(.nav-collapsed) {
+    z-index: 1200;
+    width: min(var(--nav-width), 85vw); /* optional but sensible on mobile */
+  }
+}
+
+.app-header{
+  flex: 0 0 auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200; /* keep header above the fixed nav and page */
+  height: var(--header-height);
+  background: inherit; /* or set explicit */
+  display: flex;
+  align-items: center;
+}
+
+/* Allow the header title to be nudged down by a small number of pixels
+   using the `--header-text-y-offset` CSS variable. Default is 3px. */
+.app-header .header-title {
+  display: inline-block;
+  transform: translateY(var(--header-text-y-offset, 3px)) !important;
+  will-change: transform;
+}
+
+
+.app-content{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+
+  /* remove left inset (this is the white strip beside expanded nav) */
+  padding: 0 1rem 1rem 0;
+}
+/* Push main content down so it's not hidden behind the fixed header */
+
+
+.pdf-wrap{
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* Homepage oversized faint background icon */
+.home-background {
+  position: relative;
+  overflow: hidden;
+}
+.home-background > * {
+  position: relative;
+  z-index: 1; /* keep content above the decorative icon */
+}
+.home-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url('/icons/home-icon.svg');
+  background-repeat: no-repeat;
+  /* allow vertical position to be driven by a CSS variable updated from JS */
+  background-position: center var(--home-bg-y, 50%);
+  background-size: var(--home-bg-size, 80vw); /* default larger size */
+  opacity: 0.5; /* 50% opacity */
+  transform: translateZ(0);
+  /* smooth transitions when JS updates the position/size */
+  transition: background-position 600ms ease, background-size 600ms ease, opacity 300ms ease;
+  will-change: background-position, background-size;
+}
+
+.home-background {
+  /* expose a default size variable on the container for easy overrides */
+  --home-bg-size: 80vw;
+}
+
+/* remove any default spacing that can create a band */
+main, .main, .content, .page {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* react-pdf wrappers sometimes add spacing via line-height/inline layout */
+.react-pdf__Document,
+.react-pdf__Page {
+  margin: 0;
+}
+
+.react-pdf__Page__svg {
+  display: block; /* removes baseline whitespace under svg */
 }
