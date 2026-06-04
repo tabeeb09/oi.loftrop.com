@@ -33,8 +33,9 @@ html, body, #__next {
   font-family: var(--site-font-family) !important;
   margin: 0;
   padding: 0;
-  overflow-x: visible; /* kill browser-level horizontal scrollbar */
+  overflow-x: visible; /* allow horizontal overflow for nav expansion on mobile */
 }
+
 :root{
   --nav-width: 16rem;
   --collapsed-width: 3rem;

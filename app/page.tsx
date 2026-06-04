@@ -8,12 +8,17 @@ import SkillGroup from "@/components/SkillGroup";
 import ExperienceCard from "@/components/ExperienceCard";
 
 const bestGrades = [
-  { module: "Scientific Presentation", grade: "100%" },
-  { module: <><a href="/climate_data_analysis">Climate Change Advanced data analysis</a></>, grade: "90%" },
-  { module: "Programmatic Astrophysics Modelling", grade: "84%" },
-  { module: "Scientific computing", grade: "75%" },
-  { module: "Mathematical modelling", grade: "70%" },
+  { id: "presentation", module: "Scientific Presentation", grade: "100%" },
+  {
+    id: "climate",
+    module: <a href="/climate_data_analysis">Climate Change Advanced data analysis</a>,
+    grade: "90%",
+  },
+  { id: "astro", module: "Programmatic Astrophysics Modelling", grade: "84%" },
+  { id: "sci-comp", module: "Scientific computing", grade: "75%" },
+  { id: "math-mod", module: "Mathematical modelling", grade: "70%" },
 ];
+
 
 const skills = {
   "Web Development": [
@@ -121,7 +126,7 @@ return (
                 </thead>
                 <tbody>
                   {bestGrades.map((g) => (
-                    <tr key={g.module}>
+                    <tr key={g.id}>
                       <td>{g.module}</td>
                       <td className="text-end fw-semibold">{g.grade}</td>
                     </tr>

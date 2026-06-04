@@ -12,17 +12,45 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 export default function PdfViewer({ url }: { url: string }) {
   const [numPages, setNumPages] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="w-full">
-      <Document file={url} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
+      {error && (
+        <div style={{ padding: 12, border: "1px solid #f00", marginBottom: 12 }}>
+          <div>PDF failed:</div>
+          <pre style={{ whiteSpace: "pre-wrap" }}>{error}</pre>
+        </div>
+      )}
+
+      <Document
+        file={url}
+        loading={<div>Loading PDF…</div>}
+        error={<div>react-pdf error (see console + red box)</div>}
+        onLoadSuccess={({ numPages }) => {
+          setError(null);
+          setNumPages(numPages);
+        }}
+        onLoadError={(e) => {
+          console.error("Document onLoadError:", e);
+          setError(String((e as any)?.message ?? e));
+        }}
+        onSourceError={(e) => {
+          console.error("Document onSourceError:", e);
+          setError(String((e as any)?.message ?? e));
+        }}
+      >
         {Array.from({ length: numPages }, (_, i) => (
           <div key={i} className="mb-6">
             <Page
               pageNumber={i + 1}
-              width={900}          // change this to fit your layout
-              scale={1} 
-              renderMode="svg"           // or adjust scale instead of width
+              width={900}
+              // TEMP: remove SVG mode while debugging
+              // renderMode="svg"
+              onRenderError={(e) => {
+                console.error("Page onRenderError:", e);
+                setError(String((e as any)?.message ?? e));
+              }}
             />
           </div>
         ))}

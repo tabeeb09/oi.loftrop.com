@@ -14,7 +14,7 @@
 /coverage
 
 # cv
-/public/pdfs
+/public/pdfs/cv.pdf
 
 # NavBar iterations
 /components/VerticalNavBar.tsx
@@ -31,6 +31,8 @@
 # misc
 .DS_Store
 *.pem
+*.tar
+*.tar.zip
 
 # debug
 npm-debug.log*
@@ -40,6 +42,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# runtime secrets generated from OpenBao
+.env.runtime
+/secrets/*.env
+/secrets/*.token
+/secrets/*.json
 
 # vercel
 .vercel

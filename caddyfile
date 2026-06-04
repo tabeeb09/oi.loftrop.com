@@ -1,3 +1,23 @@
-oi.loftrop.com {
-  reverse_proxy app:3000
+{$APP_HOST} {
+  reverse_proxy website:3000
+}
+
+{$MEDIA_HOST} {
+  reverse_proxy rustfs:9000
+}
+
+{$OAUTH2_PROXY_HOST} {
+  reverse_proxy oauth2-proxy:4180
+}
+
+{$RUSTFS_ADMIN_HOST} {
+  reverse_proxy oauth2-proxy:4180
+}
+
+{$AUTH_HOST} {
+  reverse_proxy keycloak:8080
+}
+
+{$SECRETS_HOST} {
+  reverse_proxy openbao:8200
 }

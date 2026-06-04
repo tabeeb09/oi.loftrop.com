@@ -21,7 +21,7 @@ export default function Header() {
           <h1 className="header-title" style={{ fontSize: '2.5rem', fontWeight: 'bold' }}>Tabeeb Rahman</h1>
         </div>
         <div className="header-right" style={{marginRight: '0.75rem', gap: '0.5rem'}}>
-          <HeaderButton href="https://www.linkedin.com/" variant="outline-primary" className="header-btn" >
+          <HeaderButton href="https://www.linkedin.com/in/tabeeb-rahman-88428722a/" variant="outline-primary" className="header-btn" >
             <b>Hire me</b>
           </HeaderButton>
           {status === "loading" ? null : session ? (
@@ -49,6 +49,4 @@ export default function Header() {
     </header>
   );
 }
-
-
 

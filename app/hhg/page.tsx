@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 
 const PdfViewer = dynamic(() => import("@/components/PdfViewer"), { ssr: false });
 
+
+
 export default function Home() {
   return (
     <div className="app-shell">
@@ -16,7 +18,7 @@ export default function Home() {
 
         <div className="app-content">
           <div className="pdf-wrap">
-            <PdfViewer url="/pdfs/High Harmonic Generation with Plasmonic Enhancements.pdf" />
+            <PdfViewer url="/pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf"/>
           </div>
         </div>
       </main>

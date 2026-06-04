@@ -155,7 +155,19 @@ useEffect(() => {
               src="/icons/portfolio-icon.svg"
               className="nav-collapsed-icon"
               alt="portfolio"
-              style={{ width: 'var(--collapsed-icon-size,24px)', height: 'var(--collapsed-icon-size,24px)' }}
+              style={{ width: 'var(--collapsed-icon-size,40px)', height: 'var(--collapsed-icon-size,40px)' }}
+            />
+          </button>
+          <button className="nav-collapsed-button"
+            onClick={() => {
+              window.location.href = "/cv";
+            }}
+            aria-label="Go to CV">
+            <img
+              src="/icons/page-icon.svg"
+              className="nav-collapsed-icon"
+              alt="CV"
+              style={{ width: 'var(--collapsed-icon-size,40px)', height: 'var(--collapsed-icon-size,40px)' }}
             />
           </button>
         </div>
@@ -183,11 +195,29 @@ useEffect(() => {
                     <div className="nav-profile-sub">
                       <a href="/climate_data_analysis" onClick={e => { /* stub */ }}>Climate Change Data Science</a>
                       <a href="/hhg" onClick={e => { /* stub */ }}>UCL Attosecond Particle Physics Research Project</a> 
-                      <a href="/collaborators" onClick={e => { /* stub */ }}>Web Development</a>
-                      <a href="/collaborators" onClick={e => { /* stub */ }}>Memristors & Spiking Neural Nets</a>
+                      <a href="https://github.com/tabeeb09/oi.loftrop.com" onClick={e => { /* stub */ }}>Web Development</a>
+                      <a href="/neuromorphic" onClick={e => { /* stub */ }}>Memristors & Spiking Neural Nets</a>
                       <a href="/agentic" onClick={e => { /* stub */ }}>Agentic Web Automation</a>
                     </div>
                   )}
+                <div
+                  className="nav-profile-header"
+                  onClick={() => window.location.href = "/cv"}
+                >
+                  {/* Profile header shows the user identifier without a wand icon. */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <img className="nav-home-icon" src="/icons/page-icon.svg" alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
+                    
+                  </div>
+                  <span className="nav-node-name" style={{ flex: 1, paddingLeft: '0.5rem', fontSize: '1.25rem' , fontWeight: 'bold' }}>
+                    Curriculum Vitae
+                  </span>
+
+                  </div>
+                  
+                  
+                    
+
                {/**  <a href="/collaborators" onClick={e => { /* stub */ /** }}>Neural networks in general</a>
                       <a href="/collaborators" onClick={e => { /* stub */ /**}}>Newton solutions</a>
                       <a href="/collaborators" onClick={e => { /* stub */ /**}}>Math puzzle solutions</a>

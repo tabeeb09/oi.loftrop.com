@@ -1,35 +1,40 @@
-FROM node:20-alpine as base
-RUN apk add --no-cache g++ make py3-pip libc6-compat
+FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package*.json ./
 EXPOSE 3000
 
-FROM base as builder
-WORKDIR /app
+# Install dependencies (this is where lightningcss native addon gets installed)
+FROM base AS deps
+COPY package.json package-lock.json ./
+RUN npm ci --include=optional
+
+FROM base AS builder
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-
-FROM base as production
-WORKDIR /app
-
+FROM base AS production
 ENV NODE_ENV=production
-RUN npm ci
+ENV PORT=3000
+WORKDIR /app
 
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
 USER nextjs
 
+CMD ["node","server.js"]
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/public ./public
-
-CMD npm start
-
-FROM base as dev
+# Dev image (optional)
+FROM base AS dev
 ENV NODE_ENV=development
-RUN npm install 
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --include=optional
 COPY . .
-CMD npm run dev
+CMD ["npm","run","dev"]

@@ -1,0 +1,64 @@
+name: App Deploy To VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to deploy
+        required: false
+        default: main
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Provision VPS if needed
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          REPO_URL: https://github.com/${{ github.repository }}.git
+          REPO_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "test -x /usr/bin/docker && test -d /srv/website/app/.git" || \
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo REPO_URL='${REPO_URL}' REPO_REF='${REPO_REF}' DEPLOY_USER='${DEPLOY_USER}' bash -s" < scripts/provision-app-vps.sh
+
+      - name: Update app repo on VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          REPO_REF: ${{ github.event.inputs.ref || github.ref_name }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "git -C /srv/website/app fetch --all --tags && git -C /srv/website/app checkout '${REPO_REF}' && git -C /srv/website/app pull --ff-only origin '${REPO_REF}'"
+
+      - name: Bootstrap secrets on VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/bootstrap-app-vps.sh" || {
+            echo 'VPS bootstrap requires valid AppRole credentials. SSH to the VPS over your admin path and run:'
+            echo '  cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/bootstrap-app-vps.sh'
+            exit 1
+          }
+
+      - name: Deploy app stack on VPS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/deploy-app-vps.sh"

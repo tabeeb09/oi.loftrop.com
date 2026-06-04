@@ -4,6 +4,8 @@ import AuthNav from "@/components/AuthNav";
 import VerticalNavBar from "@/components/VerticalNavBartest";
 import SectionBlock from "@/components/SectionBlock";
 
+
+
 export default function AgenticWebAutomationPage() {
   return (
     <div className="app-shell">
@@ -11,7 +13,6 @@ export default function AgenticWebAutomationPage() {
 
       <main className="app-main">
         {/* Top header/nav area consistent with other pages */}
-        <AuthNav />
 
         <div className="container py-4">
           {/* Page Hero/Header */}

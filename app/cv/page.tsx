@@ -3,6 +3,7 @@ import VerticalNavBar from "@/components/VerticalNavBartest";
 import { requireAllowed } from "@/components/requireAllowed";
 import CvPdfClient from "@/components/CvPdfClient";
 
+
 export default async function Home() {
   await requireAllowed();
 
