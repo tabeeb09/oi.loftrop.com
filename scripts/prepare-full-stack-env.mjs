@@ -122,9 +122,12 @@ function assertPresent(filePath) {
 }
 
 function main() {
-  const basePath = path.join(rootDir, baseFile);
-  const runtimePath = path.join(rootDir, runtimeFile);
-  const outputPath = path.join(rootDir, outputFile);
+  const resolveInputPath = (filePath) =>
+    path.isAbsolute(filePath) ? filePath : path.join(rootDir, filePath);
+
+  const basePath = resolveInputPath(baseFile);
+  const runtimePath = resolveInputPath(runtimeFile);
+  const outputPath = resolveInputPath(outputFile);
 
   assertPresent(basePath);
   assertPresent(runtimePath);

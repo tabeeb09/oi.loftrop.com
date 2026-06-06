@@ -19,6 +19,38 @@ require_command() {
   fi
 }
 
+host_node_is_usable() {
+  command -v node >/dev/null 2>&1 &&
+    node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 20 ? 0 : 1)" >/dev/null 2>&1
+}
+
+run_node() {
+  if host_node_is_usable; then
+    node "$@"
+    return
+  fi
+
+  docker run --rm \
+    --network host \
+    -v "$PROJECT_ROOT:/app" \
+    -v "$STATE_DIR:$STATE_DIR" \
+    -w /app \
+    -e BAO_ADDR \
+    -e BAO_APPROLE_AUTH_PATH \
+    -e OPENBAO_ROLE_ID \
+    -e OPENBAO_SECRET_ID \
+    -e BAO_ROLE_ID \
+    -e BAO_SECRET_ID \
+    -e BAO_TOKEN \
+    -e BAO_DEV_ROOT_TOKEN \
+    -e BAO_KV_MOUNT \
+    -e BAO_SECRET_PATH_WEBSITE \
+    -e BAO_SECRET_PATH_RUSTFS \
+    -e BAO_SECRET_PATH_OAUTH2_PROXY \
+    -e BAO_SECRET_PATH_KEYCLOAK \
+    node:20-alpine node "$@"
+}
+
 write_secure_file() {
   local target="$1"
   umask 077
@@ -70,7 +102,7 @@ wait_for_valid_bootstrap() {
       BAO_ADDR="$BAO_ADDR" \
       OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
       OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
-      node scripts/fetch-openbao-secrets.mjs; then
+      run_node scripts/fetch-openbao-secrets.mjs; then
       break
     fi
 
@@ -93,7 +125,7 @@ prepare_deploy_env() {
     exit 1
   fi
 
-  node scripts/prepare-full-stack-env.mjs \
+  run_node scripts/prepare-full-stack-env.mjs \
     --mode prod \
     --base "$BASE_ENV_FILE" \
     --runtime .env.runtime \
@@ -104,7 +136,6 @@ prepare_deploy_env() {
 }
 
 main() {
-  require_command node
   require_command docker
 
   cd "$PROJECT_ROOT"
