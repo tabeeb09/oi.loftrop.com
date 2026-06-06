@@ -98,8 +98,7 @@ wait_for_valid_bootstrap() {
   while true; do
     load_bootstrap_env
 
-    if env \
-      BAO_ADDR="$BAO_ADDR" \
+    if BAO_ADDR="$BAO_ADDR" \
       OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
       OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
       run_node scripts/fetch-openbao-secrets.mjs; then
