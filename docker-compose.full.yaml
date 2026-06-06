@@ -5,6 +5,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: 0.0.0.0
       AUTH_SECRET: ${AUTH_SECRET}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-${AUTH_SECRET}}
       NEXTAUTH_URL: ${NEXTAUTH_URL}

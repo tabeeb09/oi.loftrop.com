@@ -17,6 +17,7 @@ RUN npm run build
 FROM base AS production
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 WORKDIR /app
 
 RUN addgroup -g 1001 -S nodejs
