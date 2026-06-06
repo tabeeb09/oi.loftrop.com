@@ -13,11 +13,3 @@
 {$RUSTFS_ADMIN_HOST} {
   reverse_proxy oauth2-proxy:4180
 }
-
-{$AUTH_HOST} {
-  reverse_proxy keycloak:8080
-}
-
-{$SECRETS_HOST} {
-  reverse_proxy openbao:8200
-}

@@ -48,11 +48,9 @@ services:
       MEDIA_HOST: ${MEDIA_HOST}
       RUSTFS_ADMIN_HOST: ${RUSTFS_ADMIN_HOST}
       OAUTH2_PROXY_HOST: ${OAUTH2_PROXY_HOST}
-      AUTH_HOST: ${AUTH_HOST}
-      SECRETS_HOST: ${SECRETS_HOST}
     ports:
-      - "80:80"
-      - "443:443"
+      - "${APP_HTTP_PORT:-80}:80"
+      - "${APP_HTTPS_PORT:-443}:443"
     volumes:
       - ./caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
