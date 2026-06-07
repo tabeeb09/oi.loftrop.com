@@ -43,7 +43,6 @@ services:
       - "3000"
     networks:
       - edge
-      - rustfs
 
   caddy:
     image: caddy:2.9-alpine
@@ -64,9 +63,6 @@ services:
 
 networks:
   edge:
-  rustfs:
-    external: true
-    name: ${RUSTFS_NETWORK:-rustfs_internal}
 
 volumes:
   caddy_data:
