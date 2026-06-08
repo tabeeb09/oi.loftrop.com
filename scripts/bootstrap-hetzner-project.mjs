@@ -455,6 +455,22 @@ function dnsRecordsForLayout(layout, outputs, domains) {
 
 async function hostResolvesTo(hostname, expectedIp) {
   try {
+    const response = await fetch(
+      `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(hostname)}&type=A`,
+      { headers: { accept: "application/dns-json" }, signal: AbortSignal.timeout(5000) },
+    );
+    if (response.ok) {
+      const payload = await response.json();
+      const answers = payload.Answer ?? [];
+      if (answers.some((answer) => answer.type === 1 && answer.data === expectedIp)) {
+        return true;
+      }
+    }
+  } catch {
+    // Fall back to the host resolver below.
+  }
+
+  try {
     const records = await lookup(hostname, { all: true, family: 4 });
     return records.some((record) => record.address === expectedIp);
   } catch {
@@ -464,6 +480,8 @@ async function hostResolvesTo(hostname, expectedIp) {
 
 async function waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns) {
   const records = dnsRecordsForLayout(layout, outputs, domains);
+  const maxAutoAttempts = 20;
+  const retrySeconds = 15;
 
   console.log("");
   console.log("Required DNS A records:");
@@ -477,7 +495,7 @@ async function waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns) {
     return;
   }
 
-  while (true) {
+  for (let attempt = 1; ; attempt++) {
     const checks = await Promise.all(records.map(async ([host, ip]) => [host, ip, await hostResolvesTo(host, ip)]));
     const missing = checks.filter(([, , ok]) => !ok);
 
@@ -486,12 +504,20 @@ async function waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns) {
       return;
     }
 
-    console.log("DNS is not ready yet for:");
+    console.log("DNS propagation is not visible yet for:");
     for (const [host, ip] of missing) {
       console.log(`  ${host} -> ${ip}`);
     }
 
-    const answer = (await prompt(rl, "Update DNS, then press Enter to re-check, or type skip", "")).toLowerCase();
+    if (attempt <= maxAutoAttempts) {
+      console.log(`Cloudflare was updated. Waiting ${retrySeconds}s before re-check ${attempt}/${maxAutoAttempts}...`);
+      await new Promise((resolve) => setTimeout(resolve, retrySeconds * 1000));
+      continue;
+    }
+
+    const answer = (
+      await prompt(rl, "DNS still has not propagated. Press Enter to re-check, or type skip to continue anyway", "")
+    ).toLowerCase();
     if (answer === "skip") {
       console.log("Continuing without confirmed DNS. HTTPS/domain-dependent setup may fail.");
       return;
