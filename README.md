@@ -53,8 +53,10 @@ push to main
 -> ghcr.io/tabeeb09/website:latest
 -> App Deploy To VPS
 -> scripts/website-stack-vps.sh bootstrap
--> scripts/website-stack-vps.sh deploy
+-> scripts/website-stack-vps.sh app
 ```
+
+Automatic deploys from `Build and Push Website` restart only the website app stack. They do not restart RustFS. Manual `workflow_dispatch` supports `deploy_scope=app`, `deploy_scope=full`, `deploy_scope=rustfs`, or `deploy_scope=status`.
 
 Required repository secrets:
 

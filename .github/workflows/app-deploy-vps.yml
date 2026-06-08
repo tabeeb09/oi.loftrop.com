@@ -7,6 +7,10 @@ on:
         description: Git ref to deploy
         required: false
         default: main
+      deploy_scope:
+        description: "Deployment scope: app, full, rustfs, or status"
+        required: false
+        default: app
   workflow_run:
     workflows:
       - Build and Push Website
@@ -84,6 +88,26 @@ jobs:
             echo "ref=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Resolve deployment scope
+        id: scope
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "scope=app" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          scope="${{ github.event.inputs.deploy_scope || 'app' }}"
+          case "$scope" in
+            app|full|rustfs|status)
+              echo "scope=$scope" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Invalid deploy_scope: $scope" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Provision VPS if needed
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -113,12 +137,32 @@ jobs:
             exit 1
           }
 
-      - name: Deploy website stack on VPS
+      - name: Deploy requested stack on VPS
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SCOPE: ${{ steps.scope.outputs.scope }}
         run: |
-          ssh ${SSH_OPTS} -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' USE_LOCAL_RUSTFS_NETWORK='${USE_LOCAL_RUSTFS_NETWORK}' APP_EXTRA_COMPOSE_FILES='${APP_EXTRA_COMPOSE_FILES}' RUSTFS_EXTRA_COMPOSE_FILES='${RUSTFS_EXTRA_COMPOSE_FILES}' bash scripts/website-stack-vps.sh deploy"
+          case "$DEPLOY_SCOPE" in
+            app)
+              remote_command="app"
+              ;;
+            full)
+              remote_command="deploy"
+              ;;
+            rustfs)
+              remote_command="rustfs"
+              ;;
+            status)
+              remote_command="status"
+              ;;
+            *)
+              echo "Invalid deploy scope: $DEPLOY_SCOPE" >&2
+              exit 1
+              ;;
+          esac
+
+          ssh ${SSH_OPTS} -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' USE_LOCAL_RUSTFS_NETWORK='${USE_LOCAL_RUSTFS_NETWORK}' APP_EXTRA_COMPOSE_FILES='${APP_EXTRA_COMPOSE_FILES}' RUSTFS_EXTRA_COMPOSE_FILES='${RUSTFS_EXTRA_COMPOSE_FILES}' bash scripts/website-stack-vps.sh '${remote_command}'"
 
       - name: Verify deployment status
         env:
