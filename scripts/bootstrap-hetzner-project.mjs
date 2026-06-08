@@ -432,9 +432,13 @@ function terraformOutputJson(infraDir) {
 }
 
 function dnsRecordsForLayout(layout, outputs, domains) {
+  const websiteIp = layout === "single" ? outputs.single_ipv4 : outputs.website_ipv4;
+  const websiteAliases = (domains.websiteAliasHosts ?? []).map((host) => [host, websiteIp]);
+
   if (layout === "single") {
     return [
       [domains.appHost, outputs.single_ipv4],
+      ...websiteAliases,
       [domains.authHost, outputs.single_ipv4],
       [domains.baoHost, outputs.single_ipv4],
       [domains.mediaHost, outputs.single_ipv4],
@@ -447,6 +451,7 @@ function dnsRecordsForLayout(layout, outputs, domains) {
     [domains.authHost, outputs.caid_ipv4],
     [domains.baoHost, outputs.caid_ipv4],
     [domains.appHost, outputs.website_ipv4],
+    ...websiteAliases,
     [domains.mediaHost, outputs.storage_ipv4],
     [domains.oauth2Host, outputs.website_ipv4],
     [domains.rustfsAdminHost, outputs.storage_ipv4],
@@ -598,6 +603,10 @@ async function main() {
     const projectName = await promptConfig(rl, config, "projectName", "Project/resource name", "oi-loftrop");
     const baseDomain = await promptConfig(rl, config, "baseDomain", "Base domain", "loftrop.com");
     const appHost = await promptConfig(rl, config, "appHost", "Public website hostname", `oi.${baseDomain}`);
+    const websiteAliasHosts = String(config.websiteAliasHosts ?? "")
+      .split(",")
+      .map((host) => host.trim())
+      .filter(Boolean);
     const authHost = await promptConfig(rl, config, "authHost", "Keycloak/Auth hostname", `auth.${baseDomain}`);
     const baoHost = await promptConfig(rl, config, "baoHost", "OpenBao hostname", `bao.${baseDomain}`);
     const mediaHost = await promptConfig(rl, config, "mediaHost", "Public media hostname", `media.${baseDomain}`);
@@ -709,6 +718,7 @@ async function main() {
 
     const domains = {
       appHost,
+      websiteAliasHosts,
       authHost,
       baoHost,
       mediaHost,
@@ -957,7 +967,7 @@ async function main() {
       ssh({
         host: websiteHost,
         keyPath,
-        command: `cd /srv/website/app && APP_HOST='${domains.appHost}' MEDIA_HOST='${domains.mediaHost}' RUSTFS_ADMIN_HOST='${domains.rustfsAdminHost}' OAUTH2_PROXY_HOST='${domains.oauth2Host}' bash scripts/configure-single-vps-routing.sh`,
+        command: `cd /srv/website/app && APP_HOST='${domains.appHost}' WEBSITE_ALIAS_HOSTS='${domains.websiteAliasHosts.join(", ")}' MEDIA_HOST='${domains.mediaHost}' RUSTFS_ADMIN_HOST='${domains.rustfsAdminHost}' OAUTH2_PROXY_HOST='${domains.oauth2Host}' bash scripts/configure-single-vps-routing.sh`,
       });
 
       if (githubToken) {

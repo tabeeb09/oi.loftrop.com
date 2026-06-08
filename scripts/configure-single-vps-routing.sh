@@ -4,6 +4,7 @@ set -euo pipefail
 CAID_HOME="${CAID_HOME:-/srv/caid}"
 CAID_CADDY_CONTAINER="${CAID_CADDY_CONTAINER:-caid-caddy-1}"
 APP_HOST="${APP_HOST:?APP_HOST is required}"
+WEBSITE_ALIAS_HOSTS="${WEBSITE_ALIAS_HOSTS:-}"
 MEDIA_HOST="${MEDIA_HOST:?MEDIA_HOST is required}"
 RUSTFS_ADMIN_HOST="${RUSTFS_ADMIN_HOST:?RUSTFS_ADMIN_HOST is required}"
 OAUTH2_PROXY_HOST="${OAUTH2_PROXY_HOST:?OAUTH2_PROXY_HOST is required}"
@@ -33,7 +34,13 @@ connect_network_if_needed() {
 write_routes() {
   local caddyfile="$CAID_HOME/caddy/Caddyfile"
   local tmp
+  local app_hosts
   tmp="$(mktemp)"
+  app_hosts="$APP_HOST"
+
+  if [[ -n "$WEBSITE_ALIAS_HOSTS" ]]; then
+    app_hosts="$app_hosts, $WEBSITE_ALIAS_HOSTS"
+  fi
 
   if [[ ! -f "$caddyfile" ]]; then
     echo "Missing CAId Caddyfile: $caddyfile" >&2
@@ -49,7 +56,7 @@ write_routes() {
   cat >>"$tmp" <<EOF
 
 # BEGIN website single-vps routes
-$APP_HOST {
+$app_hosts {
   reverse_proxy app-website-1:3000
 }
 

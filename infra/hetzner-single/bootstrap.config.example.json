@@ -3,6 +3,7 @@
   "projectName": "my-project",
   "baseDomain": "example.com",
   "appHost": "oi.example.com",
+  "websiteAliasHosts": "www.example.com",
   "authHost": "auth.example.com",
   "baoHost": "bao.example.com",
   "mediaHost": "media.example.com",
