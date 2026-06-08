@@ -8,8 +8,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$repoRootPath = $repoRoot.Path.TrimEnd("\")
 
-function Get-MountedGoogleSecretFile {
+function Get-CleanPath {
   param(
     [string]$HostPath
   )
@@ -17,9 +18,76 @@ function Get-MountedGoogleSecretFile {
   $cleanPath = $HostPath.Trim()
   $cleanPath = $cleanPath -replace '[\u0000-\u001F]', ''
   $cleanPath = $cleanPath -replace '[`"''“”‘’]', ''
-  $cleanPath = $cleanPath.Trim()
+  return $cleanPath.Trim()
+}
+
+function Get-MountedGoogleSecretFile {
+  param(
+    [string]$HostPath
+  )
+
+  $cleanPath = Get-CleanPath -HostPath $HostPath
   $resolved = Resolve-Path -LiteralPath $cleanPath
   return Get-Item -LiteralPath $resolved
+}
+
+function Convert-RepoPathForContainer {
+  param(
+    [string]$HostPath
+  )
+
+  $cleanPath = Get-CleanPath -HostPath $HostPath
+  $resolved = Resolve-Path -LiteralPath $cleanPath
+  $resolvedPath = $resolved.Path
+
+  if (-not $resolvedPath.StartsWith($repoRootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Config file must be inside the repository so it can be mounted into the bootstrap container: $resolvedPath"
+  }
+
+  $relative = $resolvedPath.Substring($repoRootPath.Length).TrimStart("\")
+  return "/work/$($relative -replace '\\','/')"
+}
+
+function Convert-RepoFileArgs {
+  param(
+    [string[]]$ArgsToConvert
+  )
+
+  $converted = New-Object System.Collections.Generic.List[string]
+  $keys = @("--config", "--config-file")
+
+  for ($i = 0; $i -lt $ArgsToConvert.Count; $i++) {
+    $arg = $ArgsToConvert[$i]
+    $matchedInline = $false
+
+    foreach ($key in $keys) {
+      $prefix = "$key="
+      if ($arg.StartsWith($prefix)) {
+        $converted.Add("$key=$(Convert-RepoPathForContainer -HostPath $arg.Substring($prefix.Length))")
+        $matchedInline = $true
+        break
+      }
+    }
+
+    if ($matchedInline) {
+      continue
+    }
+
+    if ($keys -contains $arg) {
+      if ($i + 1 -ge $ArgsToConvert.Count) {
+        throw "$arg requires a file path argument."
+      }
+
+      $converted.Add($arg)
+      $converted.Add((Convert-RepoPathForContainer -HostPath $ArgsToConvert[$i + 1]))
+      $i++
+      continue
+    }
+
+    $converted.Add($arg)
+  }
+
+  return $converted.ToArray()
 }
 
 function Convert-GoogleSecretArg {
@@ -81,7 +149,9 @@ if ($GoogleClientSecretsFile) {
 }
 $effectiveBootstrapArgs.AddRange($BootstrapArgs)
 
-$googleSecretConversion = Convert-GoogleSecretArg -ArgsToConvert $effectiveBootstrapArgs.ToArray()
+$repoPathConversion = Convert-RepoFileArgs -ArgsToConvert $effectiveBootstrapArgs.ToArray()
+$googleSecretConversion = Convert-GoogleSecretArg -ArgsToConvert $repoPathConversion
+
 $dockerArgs = @(
   "run",
   "--rm",
