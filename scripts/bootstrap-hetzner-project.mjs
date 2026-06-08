@@ -877,7 +877,7 @@ async function main() {
       host: caidHost,
       keyPath,
       command:
-        "install -m 600 -o root -g root /tmp/caid.env /etc/caid/caid.env && cd /srv/caid && bash scripts/setup-caid-vps.sh",
+        "mkdir -p /etc/caid && install -m 600 -o root -g root /tmp/caid.env /etc/caid/caid.env && cd /srv/caid && bash scripts/setup-caid-vps.sh",
     });
     console.log(caidSetupOutput);
 
