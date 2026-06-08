@@ -176,6 +176,79 @@ async function cloudflareRequest({ apiToken, method, path, body }) {
   return payload;
 }
 
+async function hcloudRequest({ apiToken, path }) {
+  const response = await fetch(`https://api.hetzner.cloud/v1${path}`, {
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = payload.error?.message || response.statusText;
+    throw new Error(`Hetzner API GET ${path} failed: ${message}`);
+  }
+
+  return payload;
+}
+
+function serverTypeArchitecture(serverType) {
+  const architecture = String(serverType.architecture ?? serverType.cpu_type ?? "").toLowerCase();
+  const name = String(serverType.name ?? "").toLowerCase();
+
+  if (architecture.includes("arm") || name.startsWith("cax")) {
+    return "arm";
+  }
+
+  return "x86";
+}
+
+function serverTypeAvailableInLocation(serverType, location) {
+  const locationEntry = serverType.locations?.find((entry) => entry.location?.name === location || entry.name === location);
+  if (!locationEntry) {
+    return false;
+  }
+
+  return locationEntry.available !== false;
+}
+
+function serverTypeMonthlyPrice(serverType, location) {
+  const price = serverType.prices?.find((entry) => entry.location === location) ?? serverType.prices?.[0];
+  const value = price?.price_monthly?.net ?? price?.price_monthly?.gross ?? price?.price_hourly?.net ?? price?.price_hourly?.gross;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+}
+
+async function resolveHetznerServerType({ apiToken, location, requestedType, allowArm }) {
+  const normalized = String(requestedType || "auto").toLowerCase();
+  const shouldAuto = ["auto", "cheapest", "cheapest-available"].includes(normalized);
+  const payload = await hcloudRequest({ apiToken, path: "/server_types?per_page=100" });
+  const serverTypes = payload.server_types ?? [];
+  const available = serverTypes.filter((serverType) => serverTypeAvailableInLocation(serverType, location));
+  const architectureFiltered = allowArm ? available : available.filter((serverType) => serverTypeArchitecture(serverType) === "x86");
+
+  if (!shouldAuto) {
+    const requested = available.find((serverType) => serverType.name === requestedType);
+    if (requested && (allowArm || serverTypeArchitecture(requested) === "x86")) {
+      return requestedType;
+    }
+
+    console.log(`Hetzner server type '${requestedType}' is not available in '${location}'. Falling back to cheapest available type.`);
+  }
+
+  const candidates = architectureFiltered.length > 0 ? architectureFiltered : available;
+  candidates.sort((a, b) => serverTypeMonthlyPrice(a, location) - serverTypeMonthlyPrice(b, location));
+  const selected = candidates[0];
+  if (!selected) {
+    throw new Error(`No Hetzner server types are available in ${location}. Try another location such as nbg1 or hel1.`);
+  }
+
+  console.log(
+    `Selected Hetzner server type '${selected.name}' in '${location}' (${serverTypeArchitecture(selected)}, monthly price key ${serverTypeMonthlyPrice(selected, location)}).`,
+  );
+  return selected.name;
+}
+
 async function resolveCloudflareZoneId({ apiToken, zoneId, zoneName }) {
   if (zoneId) {
     return zoneId;
@@ -512,7 +585,14 @@ async function main() {
     );
     const adminCidr = await promptAdminCidr(rl, config);
     const location = await promptConfig(rl, config, "location", "Hetzner location", "fsn1");
-    const serverType = await promptConfig(rl, config, "serverType", "Default server type", "cx22");
+    const requestedServerType = await promptConfig(rl, config, "serverType", "Default server type, or auto", "auto");
+    const allowArmServerTypes = boolFromConfig(config.allowArmServerTypes, false);
+    const serverType = await resolveHetznerServerType({
+      apiToken: hcloudToken,
+      location,
+      requestedType: requestedServerType,
+      allowArm: allowArmServerTypes,
+    });
     const websiteRepoUrl = await promptConfig(
       rl,
       config,
