@@ -152,10 +152,16 @@ $effectiveBootstrapArgs.AddRange($BootstrapArgs)
 $repoPathConversion = Convert-RepoFileArgs -ArgsToConvert $effectiveBootstrapArgs.ToArray()
 $googleSecretConversion = Convert-GoogleSecretArg -ArgsToConvert $repoPathConversion
 
+$dockerRunFlags = @("--rm")
+if ([Console]::IsInputRedirected) {
+  $dockerRunFlags += "-i"
+} else {
+  $dockerRunFlags += "-it"
+}
+
 $dockerArgs = @(
   "run",
-  "--rm",
-  "-it",
+  $dockerRunFlags,
   "-v",
   "${repoRoot}:/work"
 )
