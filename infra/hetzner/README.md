@@ -25,7 +25,7 @@ The script still prompts for the Hetzner Cloud API token and master setup passwo
 - `hcloudToken`: Hetzner Cloud API token, created in the Hetzner Cloud Console under the target project.
 - `masterSetupPassword`: password used to encrypt the local recovery bundle.
 - `baseDomain`: DNS zone used to derive `auth`, `bao`, `app`, `media`, `oauth2`, and `rustfs-admin` subdomains.
-- `adminCidr`: IP/CIDR allowed to access SSH and CAId admin services.
+- `adminCidr`: IP/CIDR allowed to access SSH and CAId admin services. Use `auto` to detect your current public IP and convert it to `/32`.
 - `websiteRepoUrl`: Git repository to clone for the website project.
 - `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled.
 

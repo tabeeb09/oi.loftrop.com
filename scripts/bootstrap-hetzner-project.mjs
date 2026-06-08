@@ -109,12 +109,60 @@ function boolFromConfig(value, defaultValue) {
   return ["1", "true", "yes", "y"].includes(String(value).toLowerCase());
 }
 
+function isIpv4(value) {
+  return /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(value);
+}
+
+async function detectPublicIpv4() {
+  const endpoints = ["https://api.ipify.org", "https://ifconfig.me/ip"];
+
+  for (const endpoint of endpoints) {
+    try {
+      const response = await fetch(endpoint, { signal: AbortSignal.timeout(5000) });
+      if (!response.ok) {
+        continue;
+      }
+
+      const ip = (await response.text()).trim();
+      if (isIpv4(ip)) {
+        return ip;
+      }
+    } catch {
+      // Try the next endpoint. If all fail, the caller falls back to a manual value.
+    }
+  }
+
+  return "";
+}
+
 async function promptConfig(rl, config, key, label, defaultValue = "") {
   if (Object.prototype.hasOwnProperty.call(config, key) && config[key] !== undefined && config[key] !== null) {
     return String(config[key]);
   }
 
   return prompt(rl, label, defaultValue);
+}
+
+async function promptAdminCidr(rl, config) {
+  const configured = config.adminCidr ?? "";
+  const shouldAutoDetect =
+    !configured || String(configured).toLowerCase() === "auto" || configured === "203.0.113.10/32";
+
+  if (!shouldAutoDetect) {
+    return String(configured);
+  }
+
+  const publicIp = await detectPublicIpv4();
+  const detectedCidr = publicIp ? `${publicIp}/32` : "";
+  const fallback = detectedCidr || "0.0.0.0/0";
+
+  if (detectedCidr) {
+    console.log(`Detected current admin public IP: ${detectedCidr}`);
+  } else {
+    console.log("Could not auto-detect current public IP. Replace the admin CIDR before production use.");
+  }
+
+  return prompt(rl, "Admin CIDR allowed to SSH/CAId", fallback);
 }
 
 async function promptSecretConfig(rl, config, key, label, required = true) {
@@ -235,13 +283,7 @@ async function main() {
     const infraDir = path.join(repoRoot, "infra", layout === "single" ? "hetzner-single" : "hetzner");
     const projectName = await promptConfig(rl, config, "projectName", "Project/resource name", "oi-loftrop");
     const baseDomain = await promptConfig(rl, config, "baseDomain", "Base domain", "loftrop.com");
-    const adminCidr = await promptConfig(
-      rl,
-      config,
-      "adminCidr",
-      "Admin CIDR allowed to SSH/CAId",
-      "0.0.0.0/0",
-    );
+    const adminCidr = await promptAdminCidr(rl, config);
     const location = await promptConfig(rl, config, "location", "Hetzner location", "fsn1");
     const serverType = await promptConfig(rl, config, "serverType", "Default server type", "cx22");
     const websiteRepoUrl = await promptConfig(
