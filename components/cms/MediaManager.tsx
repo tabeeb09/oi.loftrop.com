@@ -133,39 +133,21 @@ export default function MediaManager({
           headers: file.type ? { "Content-Type": file.type } : {},
           body: file,
         }),
-        10000,
+        30000,
       );
 
       if (!uploadResponse.ok) {
-        throw new Error("Direct upload to RustFS failed.");
+        throw new Error(`RustFS returned HTTP ${uploadResponse.status}.`);
       }
-    } catch {
-      setStatus("Direct upload unavailable, using server upload...");
+    } catch (uploadError) {
+      const message =
+        uploadError instanceof Error ? uploadError.message : "Unknown direct upload error.";
 
-      const formData = new FormData();
-      formData.set("key", uploadKey);
-      formData.set("file", file);
-
-      const fallbackResponse = await fetch("/api/cms/media/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      let fallbackPayload: { error?: string };
-
-      try {
-        fallbackPayload = await fallbackResponse.json();
-      } catch {
-        setError("Server upload returned a non-JSON response.");
-        setStatus("Upload failed");
-        return;
-      }
-
-      if (!fallbackResponse.ok) {
-        setError(fallbackPayload.error ?? "Server upload failed.");
-        setStatus("Upload failed");
-        return;
-      }
+      setError(
+        `Direct upload failed: ${message} Open the media endpoint once and accept the local TLS warning if this is a dev VM.`,
+      );
+      setStatus("Upload failed");
+      return;
     }
 
     setFile(null);
