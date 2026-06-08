@@ -11,6 +11,7 @@
   "caidRepoRef": "main",
   "initialOwnerEmail": "owner@example.com",
   "googleClientId": "",
+  "googleClientSecret": "",
   "allowedEmails": "",
   "applyNow": false,
   "configureNow": false
