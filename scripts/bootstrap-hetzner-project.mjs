@@ -82,6 +82,27 @@ function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(path.resolve(filePath), "utf8").replace(/^\uFEFF/, ""));
 }
 
+function readGoogleOAuthClient(filePath) {
+  if (!filePath) {
+    return {};
+  }
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Google OAuth client secrets file was not found: ${filePath}`);
+  }
+
+  const payload = JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
+  const client = payload.web ?? payload.installed ?? payload;
+  const clientId = client.client_id ?? client.clientId ?? "";
+  const clientSecret = client.client_secret ?? client.clientSecret ?? "";
+
+  if (!clientId || !clientSecret) {
+    throw new Error(`Google OAuth client secrets file is missing client_id/client_secret: ${filePath}`);
+  }
+
+  return { clientId, clientSecret };
+}
+
 function argValue(name) {
   const prefix = `--${name}=`;
   const inline = args.find((arg) => arg.startsWith(prefix));
@@ -255,6 +276,14 @@ async function main() {
   fs.mkdirSync(generatedDir, { recursive: true });
   const configPath = argValue("config") || argValue("config-file");
   const config = readJsonFile(configPath);
+  const googleOAuthFile =
+    argValue("google-client-secrets-file") ||
+    argValue("google-client-secret-file") ||
+    config.googleClientSecretsFile ||
+    config.googleClientSecretFile ||
+    config.googleSecretsFile ||
+    "";
+  const googleOAuthClient = readGoogleOAuthClient(googleOAuthFile);
 
   const rl = readline.createInterface({ input, output });
   try {
@@ -309,14 +338,14 @@ async function main() {
       "Initial website owner email",
       `owner@${baseDomain}`,
     );
-    const googleClientId = await promptConfig(rl, config, "googleClientId", "Google OAuth client ID", "");
-    const googleClientSecret = await promptSecretConfig(
-      rl,
-      config,
-      "googleClientSecret",
-      "Google OAuth client secret",
-      false,
-    );
+    const googleClientId =
+      config.googleClientId || googleOAuthClient.clientId
+        ? String(config.googleClientId || googleOAuthClient.clientId)
+        : await promptConfig(rl, config, "googleClientId", "Google OAuth client ID", "");
+    const googleClientSecret =
+      config.googleClientSecret || googleOAuthClient.clientSecret
+        ? String(config.googleClientSecret || googleOAuthClient.clientSecret)
+        : await promptSecretConfig(rl, config, "googleClientSecret", "Google OAuth client secret", false);
     const allowedEmails = await promptConfig(
       rl,
       config,

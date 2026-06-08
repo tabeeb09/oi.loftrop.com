@@ -10,6 +10,12 @@ From the repository root:
 .\scripts\bootstrap-hetzner-project.ps1 --config infra\hetzner-single\bootstrap.config.example.json
 ```
 
+If you downloaded a Google OAuth client JSON from Google Cloud Console, pass it directly instead of manually copying the client ID and secret:
+
+```powershell
+.\scripts\bootstrap-hetzner-project.ps1 --config .\my-bootstrap.config.json --google-client-secrets-file "C:\Users\This PC\Downloads\client_secret.json"
+```
+
 On Linux/macOS:
 
 ```sh
@@ -27,6 +33,6 @@ The script still prompts for the Hetzner Cloud API token and master setup passwo
 - `baseDomain`: DNS zone used to derive `auth`, `bao`, `app`, `media`, `oauth2`, and `rustfs-admin` subdomains.
 - `adminCidr`: IP/CIDR allowed to access SSH and protected admin services. Use `auto` to detect your current public IP and convert it to `/32`.
 - `websiteRepoUrl`: Git repository to clone for the website project.
-- `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled. Leave `googleClientSecret` out of the config file if you prefer to be prompted at runtime.
+- `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled. Prefer `--google-client-secrets-file` if you have the Google-downloaded JSON file.
 
 Generated output is written under `.generated/hetzner/`, which is ignored by git.
