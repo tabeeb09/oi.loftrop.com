@@ -312,6 +312,18 @@ async function main() {
     const infraDir = path.join(repoRoot, "infra", layout === "single" ? "hetzner-single" : "hetzner");
     const projectName = await promptConfig(rl, config, "projectName", "Project/resource name", "oi-loftrop");
     const baseDomain = await promptConfig(rl, config, "baseDomain", "Base domain", "loftrop.com");
+    const appHost = await promptConfig(rl, config, "appHost", "Public website hostname", `oi.${baseDomain}`);
+    const authHost = await promptConfig(rl, config, "authHost", "Keycloak/Auth hostname", `auth.${baseDomain}`);
+    const baoHost = await promptConfig(rl, config, "baoHost", "OpenBao hostname", `bao.${baseDomain}`);
+    const mediaHost = await promptConfig(rl, config, "mediaHost", "Public media hostname", `media.${baseDomain}`);
+    const oauth2Host = await promptConfig(rl, config, "oauth2Host", "OAuth2 proxy hostname", `oauth2.${baseDomain}`);
+    const rustfsAdminHost = await promptConfig(
+      rl,
+      config,
+      "rustfsAdminHost",
+      "RustFS admin hostname",
+      `rustfs-admin.${baseDomain}`,
+    );
     const adminCidr = await promptAdminCidr(rl, config);
     const location = await promptConfig(rl, config, "location", "Hetzner location", "fsn1");
     const serverType = await promptConfig(rl, config, "serverType", "Default server type", "cx22");
@@ -373,12 +385,15 @@ async function main() {
     const sshKey = ensureSshKey(keyPath);
 
     const domains = {
-      authHost: `auth.${baseDomain}`,
-      baoHost: `bao.${baseDomain}`,
-      appUrl: `https://app.${baseDomain}`,
-      mediaUrl: `https://media.${baseDomain}`,
-      oauth2Url: `https://oauth2.${baseDomain}`,
-      rustfsAdminHost: `rustfs-admin.${baseDomain}`,
+      appHost,
+      authHost,
+      baoHost,
+      mediaHost,
+      oauth2Host,
+      rustfsAdminHost,
+      appUrl: `https://${appHost}`,
+      mediaUrl: `https://${mediaHost}`,
+      oauth2Url: `https://${oauth2Host}`,
     };
 
     const generatedSecrets = {
@@ -514,10 +529,10 @@ async function main() {
     writeEnvFile(approlePath, approle);
 
     const remoteStorageBaseEnv = [
-      `APP_HOST=app.${baseDomain}`,
-      `MEDIA_HOST=media.${baseDomain}`,
+      `APP_HOST=${domains.appHost}`,
+      `MEDIA_HOST=${domains.mediaHost}`,
       `RUSTFS_ADMIN_HOST=${domains.rustfsAdminHost}`,
-      `OAUTH2_PROXY_HOST=oauth2.${baseDomain}`,
+      `OAUTH2_PROXY_HOST=${domains.oauth2Host}`,
       `APP_HTTP_PORT=${layout === "single" ? "8081" : "80"}`,
       `APP_HTTPS_PORT=${layout === "single" ? "8443" : "443"}`,
       `RUSTFS_HTTP_PORT=${layout === "single" ? "8082" : "80"}`,
@@ -586,7 +601,7 @@ async function main() {
       ssh({
         host: websiteHost,
         keyPath,
-        command: `cd /srv/website/app && APP_HOST='app.${baseDomain}' MEDIA_HOST='media.${baseDomain}' RUSTFS_ADMIN_HOST='${domains.rustfsAdminHost}' OAUTH2_PROXY_HOST='oauth2.${baseDomain}' bash scripts/configure-single-vps-routing.sh`,
+        command: `cd /srv/website/app && APP_HOST='${domains.appHost}' MEDIA_HOST='${domains.mediaHost}' RUSTFS_ADMIN_HOST='${domains.rustfsAdminHost}' OAUTH2_PROXY_HOST='${domains.oauth2Host}' bash scripts/configure-single-vps-routing.sh`,
       });
       console.log(`Single VPS configured: ${websiteHost}`);
     } else {

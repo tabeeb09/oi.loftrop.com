@@ -8,6 +8,17 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
+function Get-MountedGoogleSecretFile {
+  param(
+    [string]$HostPath
+  )
+
+  $cleanPath = $HostPath.Trim()
+  $cleanPath = $cleanPath.Trim('"').Trim("'")
+  $resolved = Resolve-Path -LiteralPath $cleanPath
+  return Get-Item -LiteralPath $resolved
+}
+
 function Convert-GoogleSecretArg {
   param(
     [string[]]$ArgsToConvert
@@ -25,8 +36,7 @@ function Convert-GoogleSecretArg {
       $prefix = "$key="
       if ($arg.StartsWith($prefix)) {
         $hostPath = $arg.Substring($prefix.Length)
-        $resolved = Resolve-Path -LiteralPath $hostPath
-        $file = Get-Item -LiteralPath $resolved
+        $file = Get-MountedGoogleSecretFile -HostPath $hostPath
         $mount = $file.DirectoryName
         $converted.Add("$key=/google-oauth/$($file.Name)")
         $matchedInline = $true
@@ -44,8 +54,7 @@ function Convert-GoogleSecretArg {
       }
 
       $hostPath = $ArgsToConvert[$i + 1]
-      $resolved = Resolve-Path -LiteralPath $hostPath
-      $file = Get-Item -LiteralPath $resolved
+      $file = Get-MountedGoogleSecretFile -HostPath $hostPath
       $mount = $file.DirectoryName
       $converted.Add($arg)
       $converted.Add("/google-oauth/$($file.Name)")

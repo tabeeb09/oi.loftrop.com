@@ -22,7 +22,7 @@ On Linux/macOS:
 ./scripts/bootstrap-hetzner-project.sh --config infra/hetzner/bootstrap.config.example.json
 ```
 
-Copy `bootstrap.config.example.json` to a private local file and edit it for each project. Keep reusable non-secret parameters there, such as domain, Hetzner location, server sizes, repo URL, branch, and owner email.
+Copy `bootstrap.config.example.json` to a private local file and edit it for each project. Keep reusable non-secret parameters there, such as domain, public hostnames, Hetzner location, server sizes, repo URL, branch, and owner email.
 
 The script still prompts for the Hetzner Cloud API token and master setup password unless you deliberately put them in the config file. Prefer entering sensitive values interactively.
 
@@ -31,8 +31,16 @@ The script still prompts for the Hetzner Cloud API token and master setup passwo
 - `hcloudToken`: Hetzner Cloud API token, created in the Hetzner Cloud Console under the target project.
 - `masterSetupPassword`: password used to encrypt the local recovery bundle.
 - `baseDomain`: DNS zone used to derive `auth`, `bao`, `app`, `media`, `oauth2`, and `rustfs-admin` subdomains.
+- `appHost`: public hostname for the website, for example `oi.loftrop.com`.
 - `adminCidr`: IP/CIDR allowed to access SSH and CAId admin services. Use `auto` to detect your current public IP and convert it to `/32`.
 - `websiteRepoUrl`: Git repository to clone for the website project.
 - `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled. Prefer `--google-client-secrets-file` if you have the Google-downloaded JSON file.
+
+For Google OAuth with `appHost=oi.loftrop.com`, use:
+
+```text
+Authorized JavaScript origin: https://oi.loftrop.com
+Authorized redirect URI: https://oi.loftrop.com/api/auth/callback/google
+```
 
 Generated output is written under `.generated/hetzner/`, which is ignored by git.
