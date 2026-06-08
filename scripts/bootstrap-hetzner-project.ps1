@@ -1,6 +1,7 @@
 [CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$ImageName = "oi-loftrop/bootstrap-tools:local",
+  [string]$GoogleClientSecretsFile = "",
   [Parameter(ValueFromRemainingArguments = $true)]
   [string[]]$BootstrapArgs
 )
@@ -14,7 +15,9 @@ function Get-MountedGoogleSecretFile {
   )
 
   $cleanPath = $HostPath.Trim()
-  $cleanPath = $cleanPath.Trim('"').Trim("'")
+  $cleanPath = $cleanPath -replace '[\u0000-\u001F]', ''
+  $cleanPath = $cleanPath -replace '[`"''“”‘’]', ''
+  $cleanPath = $cleanPath.Trim()
   $resolved = Resolve-Path -LiteralPath $cleanPath
   return Get-Item -LiteralPath $resolved
 }
@@ -71,7 +74,14 @@ function Convert-GoogleSecretArg {
   }
 }
 
-$googleSecretConversion = Convert-GoogleSecretArg -ArgsToConvert $BootstrapArgs
+$effectiveBootstrapArgs = New-Object System.Collections.Generic.List[string]
+if ($GoogleClientSecretsFile) {
+  $effectiveBootstrapArgs.Add("--google-client-secrets-file")
+  $effectiveBootstrapArgs.Add($GoogleClientSecretsFile)
+}
+$effectiveBootstrapArgs.AddRange($BootstrapArgs)
+
+$googleSecretConversion = Convert-GoogleSecretArg -ArgsToConvert $effectiveBootstrapArgs.ToArray()
 $dockerArgs = @(
   "run",
   "--rm",
