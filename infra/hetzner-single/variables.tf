@@ -22,7 +22,7 @@ variable "image" {
 
 variable "server_type" {
   type    = string
-  default = "cx22"
+  default = "cpx11"
 }
 
 variable "admin_cidr" {

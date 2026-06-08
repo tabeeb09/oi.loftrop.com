@@ -10,7 +10,7 @@
   "rustfsAdminHost": "rustfs-admin.example.com",
   "adminCidr": "auto",
   "location": "fsn1",
-  "serverType": "cx22",
+  "serverType": "cpx11",
   "websiteRepoUrl": "https://github.com/owner/website.git",
   "websiteRepoRef": "main",
   "githubRepository": "owner/website",

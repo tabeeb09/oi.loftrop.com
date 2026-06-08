@@ -24,17 +24,17 @@ variable "image" {
 
 variable "caid_server_type" {
   type    = string
-  default = "cx22"
+  default = "cpx11"
 }
 
 variable "storage_server_type" {
   type    = string
-  default = "cx22"
+  default = "cpx11"
 }
 
 variable "website_server_type" {
   type    = string
-  default = "cx22"
+  default = "cpx11"
 }
 
 variable "admin_cidr" {
