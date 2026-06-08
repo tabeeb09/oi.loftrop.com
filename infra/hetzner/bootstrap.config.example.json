@@ -20,6 +20,12 @@
   "googleClientId": "",
   "googleClientSecret": "",
   "allowedEmails": "",
+  "dnsProvider": "none",
+  "cloudflareZoneName": "example.com",
+  "cloudflareZoneId": "",
+  "cloudflareApiToken": "",
+  "cloudflareProxied": false,
+  "cloudflareTtl": 120,
   "waitForDns": true,
   "applyNow": true,
   "configureNow": true

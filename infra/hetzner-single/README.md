@@ -35,6 +35,8 @@ The script still prompts for the Hetzner Cloud API token and master setup passwo
 - `adminCidr`: IP/CIDR allowed to access SSH and protected admin services. Use `auto` to detect your current public IP and convert it to `/32`.
 - `websiteRepoUrl`: Git repository to clone for the website project.
 - `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled. Prefer `--google-client-secrets-file` if you have the Google-downloaded JSON file.
+- `dnsProvider`: set to `cloudflare` to let the bootstrapper create/update the DNS records after Terraform returns the VPS IP.
+- `cloudflareApiToken`: optional in the config file; if `dnsProvider=cloudflare` and this is blank, the script prompts for it. The token needs `Zone:DNS:Edit` and `Zone:Zone:Read` on the `loftrop.com` zone.
 
 For Google OAuth with `appHost=oi.loftrop.com`, use:
 
@@ -46,3 +48,5 @@ Authorized redirect URI: https://oi.loftrop.com/api/auth/callback/google
 Generated output is written under `.generated/hetzner/`, which is ignored by git.
 
 After Terraform creates the VPS, the bootstrapper prints the required DNS `A` records and waits for them to resolve before continuing. This is necessary because the VPS IP is only known after provisioning.
+
+If `dnsProvider=cloudflare`, the bootstrapper updates those DNS records automatically before the DNS wait step. The Cloudflare token is also passed into CAId and stored in OpenBao at `kv/data/cloudflare/prod`.

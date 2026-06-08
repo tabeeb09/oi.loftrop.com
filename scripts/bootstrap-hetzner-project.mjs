@@ -157,6 +157,71 @@ async function detectPublicIpv4() {
   return "";
 }
 
+async function cloudflareRequest({ apiToken, method, path, body }) {
+  const response = await fetch(`https://api.cloudflare.com/client/v4${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      "Content-Type": "application/json",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    const message = payload.errors?.map((error) => error.message).join("; ") || response.statusText;
+    throw new Error(`Cloudflare API ${method} ${path} failed: ${message}`);
+  }
+
+  return payload;
+}
+
+async function resolveCloudflareZoneId({ apiToken, zoneId, zoneName }) {
+  if (zoneId) {
+    return zoneId;
+  }
+
+  const payload = await cloudflareRequest({
+    apiToken,
+    method: "GET",
+    path: `/zones?name=${encodeURIComponent(zoneName)}`,
+  });
+  const resolved = payload.result?.[0]?.id;
+  if (!resolved) {
+    throw new Error(`Cloudflare zone was not found for ${zoneName}. Provide cloudflareZoneId explicitly.`);
+  }
+  return resolved;
+}
+
+async function upsertCloudflareARecord({ apiToken, zoneId, name, ip, proxied = false, ttl = 120 }) {
+  const query = `/zones/${zoneId}/dns_records?type=A&name=${encodeURIComponent(name)}`;
+  const existing = await cloudflareRequest({ apiToken, method: "GET", path: query });
+  const current = existing.result?.[0];
+  const payload = {
+    type: "A",
+    name,
+    content: ip,
+    ttl,
+    proxied,
+  };
+
+  if (current) {
+    await cloudflareRequest({
+      apiToken,
+      method: "PUT",
+      path: `/zones/${zoneId}/dns_records/${current.id}`,
+      body: payload,
+    });
+  } else {
+    await cloudflareRequest({
+      apiToken,
+      method: "POST",
+      path: `/zones/${zoneId}/dns_records`,
+      body: payload,
+    });
+  }
+}
+
 async function promptConfig(rl, config, key, label, defaultValue = "") {
   if (Object.prototype.hasOwnProperty.call(config, key) && config[key] !== undefined && config[key] !== null) {
     return String(config[key]);
@@ -361,6 +426,28 @@ async function waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns) {
   }
 }
 
+async function updateCloudflareDnsIfConfigured({ layout, outputs, domains, cloudflare }) {
+  if (!cloudflare.apiToken) {
+    console.log("Cloudflare DNS automation not configured.");
+    return;
+  }
+
+  const zoneId = await resolveCloudflareZoneId({
+    apiToken: cloudflare.apiToken,
+    zoneId: cloudflare.zoneId,
+    zoneName: cloudflare.zoneName,
+  });
+  const records = dnsRecordsForLayout(layout, outputs, domains);
+  const proxied = cloudflare.proxied;
+  const ttl = cloudflare.ttl;
+
+  console.log("Updating Cloudflare DNS A records...");
+  for (const [host, ip] of records) {
+    await upsertCloudflareARecord({ apiToken: cloudflare.apiToken, zoneId, name: host, ip, proxied, ttl });
+    console.log(`  ${host} -> ${ip}`);
+  }
+}
+
 async function main() {
   if (!commandExists("terraform")) {
     throw new Error("Terraform is required. Run this through scripts/bootstrap-hetzner-project.ps1 or .sh.");
@@ -471,6 +558,26 @@ async function main() {
       "GitHub token for runner auto-registration and repo variables (blank to skip)",
       false,
     );
+    const dnsProvider = await promptConfig(rl, config, "dnsProvider", "DNS provider: none or cloudflare", "none");
+    if (!["none", "cloudflare"].includes(dnsProvider)) {
+      throw new Error("dnsProvider must be 'none' or 'cloudflare'.");
+    }
+    let cloudflareApiToken = "";
+    let cloudflareZoneName = baseDomain;
+    let cloudflareZoneId = "";
+    if (dnsProvider === "cloudflare") {
+      cloudflareApiToken =
+        config.cloudflareApiToken || config.cloudflareApiToken === ""
+          ? String(config.cloudflareApiToken)
+          : await promptSecret(rl, "Cloudflare API token with Zone:DNS:Edit");
+      if (!cloudflareApiToken) {
+        cloudflareApiToken = await promptSecret(rl, "Cloudflare API token with Zone:DNS:Edit");
+      }
+      cloudflareZoneName = await promptConfig(rl, config, "cloudflareZoneName", "Cloudflare zone name", baseDomain);
+      cloudflareZoneId = await promptConfig(rl, config, "cloudflareZoneId", "Cloudflare zone ID (blank to auto-detect)", "");
+    }
+    const cloudflareProxied = boolFromConfig(config.cloudflareProxied, false);
+    const cloudflareTtl = Number(config.cloudflareTtl ?? 120);
     const githubRepository = await promptConfig(
       rl,
       config,
@@ -551,6 +658,16 @@ async function main() {
       caidRepoUrl,
       caidRepoRef,
       githubRepository,
+      dnsProvider,
+      cloudflare: cloudflareApiToken
+        ? {
+            zoneName: cloudflareZoneName,
+            zoneId: cloudflareZoneId || undefined,
+            apiToken: cloudflareApiToken,
+            proxied: cloudflareProxied,
+            ttl: cloudflareTtl,
+          }
+        : undefined,
       googleClientId: googleClientId || undefined,
       googleClientSecret: googleClientSecret || undefined,
       allowedEmails: allowedEmails || undefined,
@@ -578,6 +695,19 @@ async function main() {
     writePrivateFile(outputsPath, JSON.stringify(outputs, null, 2));
     console.log(`Terraform outputs written to ${outputsPath}`);
 
+    await updateCloudflareDnsIfConfigured({
+      layout,
+      outputs,
+      domains,
+      cloudflare: {
+        apiToken: cloudflareApiToken,
+        zoneId: cloudflareZoneId,
+        zoneName: cloudflareZoneName,
+        proxied: cloudflareProxied,
+        ttl: cloudflareTtl,
+      },
+    });
+
     if (!configureNow) {
       await waitForDnsIfNeeded(rl, layout, outputs, domains, false);
       return;
@@ -604,6 +734,12 @@ async function main() {
       GOOGLE_CLIENT_ID: googleClientId,
       GOOGLE_CLIENT_SECRET: googleClientSecret,
       ALLOWED_EMAILS: allowedEmails,
+      DNS_PROVIDER: dnsProvider,
+      CLOUDFLARE_ZONE_NAME: cloudflareZoneName,
+      CLOUDFLARE_ZONE_ID: cloudflareZoneId,
+      CLOUDFLARE_API_TOKEN: cloudflareApiToken,
+      CLOUDFLARE_PROXIED: String(cloudflareProxied),
+      CLOUDFLARE_TTL: String(cloudflareTtl),
       WEBSITE_AUTH_SECRET: generatedSecrets.websiteAuthSecret,
       RUSTFS_ACCESS_KEY_ID: generatedSecrets.rustfsAccessKeyId,
       RUSTFS_SECRET_ACCESS_KEY: generatedSecrets.rustfsSecretAccessKey,
