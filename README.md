@@ -68,9 +68,22 @@ DEPLOY_SSH_KNOWN_HOSTS
 Optional repository variables:
 
 ```text
+DEPLOY_PORT=22
 USE_LOCAL_RUSTFS_NETWORK=true
 APP_EXTRA_COMPOSE_FILES=
 RUSTFS_EXTRA_COMPOSE_FILES=
+```
+
+Generate the deploy SSH key and known-hosts value from a local machine:
+
+```powershell
+.\scripts\prepare-github-actions-vps-deploy.ps1 -HostName your-vps-hostname -UserName deploy -InstallPublicKey
+```
+
+For a non-standard SSH port:
+
+```powershell
+.\scripts\prepare-github-actions-vps-deploy.ps1 -HostName your-vps-hostname -UserName deploy -Port 2222 -InstallPublicKey
 ```
 
 For the current same-VM dev setup, the optional override variables are useful. Production should normally leave them empty unless a host needs local-only compose overrides.
