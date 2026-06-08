@@ -8,6 +8,7 @@ BOOTSTRAP_ENV_FILE="${BOOTSTRAP_ENV_FILE:-$STATE_DIR/openbao-bootstrap.env}"
 RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-$STATE_DIR/runtime.env}"
 DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-$STATE_DIR/deploy.env}"
 BASE_ENV_FILE="${BASE_ENV_FILE:-$STATE_DIR/base.env}"
+BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE:-wait}"
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
@@ -112,6 +113,11 @@ wait_for_valid_bootstrap() {
       rm -f "$BOOTSTRAP_ENV_FILE"
       prompt_for_bootstrap_env
       continue
+    fi
+
+    if [[ "$BOOTSTRAP_ON_FAILURE" == "exit" || "${CI:-}" == "true" ]]; then
+      echo "Bootstrap failed in non-interactive mode. Correct $BOOTSTRAP_ENV_FILE, then rerun." >&2
+      exit 1
     fi
 
     echo "Waiting for corrected credentials at $BOOTSTRAP_ENV_FILE ..."

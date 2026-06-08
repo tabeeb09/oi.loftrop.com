@@ -34,11 +34,13 @@ if (-not (Test-Path $KeyPath)) {
 
 $publicKeyPath = "$KeyPath.pub"
 $privateKey = Get-Content -Raw -Path $KeyPath
+$privateKeyB64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($privateKey))
 $publicKey = Get-Content -Raw -Path $publicKeyPath
 $knownHosts = ssh-keyscan -p $Port -t ed25519,rsa $HostName 2>$null
 if (-not $knownHosts) {
   throw "ssh-keyscan returned no host keys for $HostName on port $Port."
 }
+$knownHostsB64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(($knownHosts -join "`n") + "`n"))
 
 if ($InstallPublicKey) {
   Require-Command ssh
@@ -52,8 +54,12 @@ Write-Host "DEPLOY_HOST=$HostName"
 Write-Host "DEPLOY_USER=$UserName"
 Write-Host "DEPLOY_SSH_PRIVATE_KEY:"
 Write-Host $privateKey
+Write-Host "DEPLOY_SSH_PRIVATE_KEY_B64:"
+Write-Host $privateKeyB64
 Write-Host "DEPLOY_SSH_KNOWN_HOSTS:"
 Write-Host $knownHosts
+Write-Host "DEPLOY_SSH_KNOWN_HOSTS_B64:"
+Write-Host $knownHostsB64
 Write-Host ""
 Write-Host "Add this GitHub repository variable:"
 Write-Host "DEPLOY_PORT=$Port"
