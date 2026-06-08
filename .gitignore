@@ -29,11 +29,17 @@
 # production
 /build
 
+# generated bootstrap/infra state
+/.generated/
+*.tfstate
+*.tfstate.*
+
 # misc
 .DS_Store
 *.pem
 *.tar
 *.tar.zip
+crash.log
 
 # debug
 npm-debug.log*

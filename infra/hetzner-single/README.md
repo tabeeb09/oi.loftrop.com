@@ -1,0 +1,32 @@
+# Hetzner Single-VPS Bootstrap
+
+This layout provisions one Hetzner Cloud VPS for CAId/OpenBao/Keycloak, RustFS, and the website stack. It is the lowest-cost deployment shape and routes services internally through the CAId Caddy gateway.
+
+## One Command
+
+From the repository root:
+
+```powershell
+.\scripts\bootstrap-hetzner-project.ps1 --config infra\hetzner-single\bootstrap.config.example.json
+```
+
+On Linux/macOS:
+
+```sh
+./scripts/bootstrap-hetzner-project.sh --config infra/hetzner-single/bootstrap.config.example.json
+```
+
+Copy `bootstrap.config.example.json` to a private local file and edit it for each project. Keep reusable non-secret parameters there, such as domain, Hetzner location, server size, repo URL, branch, and owner email.
+
+The script still prompts for the Hetzner Cloud API token and master setup password unless you deliberately put them in the config file. Prefer entering sensitive values interactively.
+
+## Required Human Inputs
+
+- `hcloudToken`: Hetzner Cloud API token, created in the Hetzner Cloud Console under the target project.
+- `masterSetupPassword`: password used to encrypt the local recovery bundle.
+- `baseDomain`: DNS zone used to derive `auth`, `bao`, `app`, `media`, `oauth2`, and `rustfs-admin` subdomains.
+- `adminCidr`: IP/CIDR allowed to access SSH and protected admin services.
+- `websiteRepoUrl`: Git repository to clone for the website project.
+- `googleClientId` and `googleClientSecret`: optional, only required if Google login is enabled.
+
+Generated output is written under `.generated/hetzner/`, which is ignored by git.

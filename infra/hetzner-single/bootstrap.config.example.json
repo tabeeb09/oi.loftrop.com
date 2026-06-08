@@ -1,0 +1,17 @@
+{
+  "layout": "single",
+  "projectName": "my-project",
+  "baseDomain": "example.com",
+  "adminCidr": "203.0.113.10/32",
+  "location": "fsn1",
+  "serverType": "cx22",
+  "websiteRepoUrl": "https://github.com/owner/website.git",
+  "websiteRepoRef": "main",
+  "caidRepoUrl": "https://github.com/tabeeb09/caid.git",
+  "caidRepoRef": "main",
+  "initialOwnerEmail": "owner@example.com",
+  "googleClientId": "",
+  "allowedEmails": "",
+  "applyNow": false,
+  "configureNow": false
+}
