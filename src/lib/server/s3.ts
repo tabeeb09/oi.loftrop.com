@@ -37,11 +37,11 @@ function joinUrl(base: string, bucket: string, key: string) {
   return `${normalizedBase}/${bucket}/${key}`;
 }
 
-function makeClient() {
+function makeClient(endpoint = env.S3_ENDPOINT) {
   assertS3Config();
 
   return new S3Client({
-    endpoint: env.S3_ENDPOINT,
+    endpoint,
     region: env.S3_REGION,
     forcePathStyle: true,
     credentials: {
@@ -84,7 +84,7 @@ export async function listMediaObjects(prefix?: string) {
 }
 
 export async function createPresignedUploadUrl(key: string, contentType?: string) {
-  const client = makeClient();
+  const client = makeClient(env.S3_PUBLIC_ENDPOINT ?? env.NEXT_PUBLIC_MEDIA_BASE_URL ?? env.S3_ENDPOINT);
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET,
     Key: cleanPrefix(key),

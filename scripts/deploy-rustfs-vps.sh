@@ -103,4 +103,31 @@ docker run --rm \
     mc anonymous set download "rustfs/$S3_BUCKET"
   '
 
+cors_file="$(mktemp)"
+cat >"$cors_file" <<JSON
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["*"],
+      "AllowedMethods": ["GET", "HEAD", "PUT"],
+      "AllowedHeaders": ["*"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+}
+JSON
+
+docker run --rm \
+  --network "${RUSTFS_NETWORK:-rustfs_internal}" \
+  -v "$cors_file:/tmp/cors.json:ro" \
+  -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
+  -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
+  -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
+  amazon/aws-cli s3api put-bucket-cors \
+    --bucket "$S3_BUCKET" \
+    --cors-configuration file:///tmp/cors.json \
+    --endpoint-url "$S3_ENDPOINT"
+rm -f "$cors_file"
+
 echo "RustFS bucket is ready: $S3_BUCKET"
