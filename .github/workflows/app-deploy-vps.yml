@@ -7,16 +7,47 @@ on:
         description: Git ref to deploy
         required: false
         default: main
-  push:
-    branches: [main]
+  workflow_run:
+    workflows:
+      - Build and Push Website
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: read
 
+concurrency:
+  group: app-deploy-vps
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: /srv/website/app
+      PROJECT_NAME: website
+      USE_LOCAL_RUSTFS_NETWORK: ${{ vars.USE_LOCAL_RUSTFS_NETWORK || 'true' }}
+      APP_EXTRA_COMPOSE_FILES: ${{ vars.APP_EXTRA_COMPOSE_FILES || '' }}
+      RUSTFS_EXTRA_COMPOSE_FILES: ${{ vars.RUSTFS_EXTRA_COMPOSE_FILES || '' }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_HOST" || { echo "Missing secret DEPLOY_HOST"; exit 1; }
+          test -n "$DEPLOY_USER" || { echo "Missing secret DEPLOY_USER"; exit 1; }
+          test -n "$DEPLOY_SSH_PRIVATE_KEY" || { echo "Missing secret DEPLOY_SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$DEPLOY_SSH_KNOWN_HOSTS" || { echo "Missing secret DEPLOY_SSH_KNOWN_HOSTS"; exit 1; }
+
       - name: Configure SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
@@ -27,12 +58,22 @@ jobs:
           printf '%s\n' "${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Resolve deployment ref
+        id: ref
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "ref=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=${{ github.event.inputs.ref || 'main' }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Provision VPS if needed
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           REPO_URL: https://github.com/${{ github.repository }}.git
-          REPO_REF: ${{ github.event.inputs.ref || github.ref_name }}
+          REPO_REF: ${{ steps.ref.outputs.ref }}
         run: |
           ssh ${DEPLOY_USER}@${DEPLOY_HOST} "test -x /usr/bin/docker && test -d /srv/website/app/.git" || \
           ssh ${DEPLOY_USER}@${DEPLOY_HOST} "sudo REPO_URL='${REPO_URL}' REPO_REF='${REPO_REF}' DEPLOY_USER='${DEPLOY_USER}' bash -s" < scripts/provision-app-vps.sh
@@ -41,24 +82,31 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          REPO_REF: ${{ github.event.inputs.ref || github.ref_name }}
+          REPO_REF: ${{ steps.ref.outputs.ref }}
         run: |
-          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "git -C /srv/website/app fetch --all --tags && git -C /srv/website/app checkout '${REPO_REF}' && git -C /srv/website/app pull --ff-only origin '${REPO_REF}'"
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo git config --global --add safe.directory '${DEPLOY_PATH}' && sudo git fetch --all --tags --prune && sudo git checkout '${REPO_REF}' && if sudo git show-ref --verify --quiet 'refs/remotes/origin/${REPO_REF}'; then sudo git reset --hard 'origin/${REPO_REF}'; else sudo git reset --hard '${REPO_REF}'; fi"
 
       - name: Bootstrap secrets on VPS
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/bootstrap-app-vps.sh" || {
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' bash scripts/website-stack-vps.sh bootstrap" || {
             echo 'VPS bootstrap requires valid AppRole credentials. SSH to the VPS over your admin path and run:'
-            echo '  cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/bootstrap-app-vps.sh'
+            echo '  cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website bash scripts/website-stack-vps.sh bootstrap'
             exit 1
           }
 
-      - name: Deploy app stack on VPS
+      - name: Deploy website stack on VPS
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/deploy-app-vps.sh"
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' USE_LOCAL_RUSTFS_NETWORK='${USE_LOCAL_RUSTFS_NETWORK}' APP_EXTRA_COMPOSE_FILES='${APP_EXTRA_COMPOSE_FILES}' RUSTFS_EXTRA_COMPOSE_FILES='${RUSTFS_EXTRA_COMPOSE_FILES}' bash scripts/website-stack-vps.sh deploy"
+
+      - name: Verify deployment status
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' USE_LOCAL_RUSTFS_NETWORK='${USE_LOCAL_RUSTFS_NETWORK}' APP_EXTRA_COMPOSE_FILES='${APP_EXTRA_COMPOSE_FILES}' RUSTFS_EXTRA_COMPOSE_FILES='${RUSTFS_EXTRA_COMPOSE_FILES}' bash scripts/website-stack-vps.sh status"

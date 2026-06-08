@@ -42,3 +42,35 @@ Hierarchy:
 - `bootstrap-app-vps.sh` fetches OpenBao secrets and writes deploy env files.
 - `deploy-rustfs-vps.sh` starts RustFS, OAuth2 Proxy, and the media Caddy.
 - `deploy-app-vps.sh` starts the Next.js website and website Caddy.
+
+## GitHub Actions deployment
+
+The deployment flow is:
+
+```text
+push to main
+-> Build and Push Website
+-> ghcr.io/tabeeb09/website:latest
+-> App Deploy To VPS
+-> scripts/website-stack-vps.sh bootstrap
+-> scripts/website-stack-vps.sh deploy
+```
+
+Required repository secrets:
+
+```text
+DEPLOY_HOST
+DEPLOY_USER
+DEPLOY_SSH_PRIVATE_KEY
+DEPLOY_SSH_KNOWN_HOSTS
+```
+
+Optional repository variables:
+
+```text
+USE_LOCAL_RUSTFS_NETWORK=true
+APP_EXTRA_COMPOSE_FILES=
+RUSTFS_EXTRA_COMPOSE_FILES=
+```
+
+For the current same-VM dev setup, the optional override variables are useful. Production should normally leave them empty unless a host needs local-only compose overrides.
