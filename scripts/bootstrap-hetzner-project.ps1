@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
   [string]$ImageName = "oi-loftrop/bootstrap-tools:local",
   [Parameter(ValueFromRemainingArguments = $true)]
