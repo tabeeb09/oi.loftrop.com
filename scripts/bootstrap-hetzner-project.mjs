@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import crypto from "node:crypto";
+import { lookup } from "node:dns/promises";
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline/promises";
@@ -222,6 +223,36 @@ function writeEnvFile(filePath, values) {
   writePrivateFile(filePath, `${body}\n`);
 }
 
+function shellQuote(value) {
+  return `'${String(value ?? "").replace(/'/g, "'\"'\"'")}'`;
+}
+
+function writeShellEnvFile(filePath, values) {
+  const body = Object.entries(values)
+    .map(([key, value]) => `${key}=${shellQuote(value)}`)
+    .join("\n");
+  writePrivateFile(filePath, `${body}\n`);
+}
+
+function githubRepositoryFromUrl(repoUrl) {
+  const withoutGit = repoUrl.replace(/\.git$/i, "");
+  const sshMatch = withoutGit.match(/github\.com[:/]([^/]+\/[^/]+)$/i);
+  if (sshMatch) {
+    return sshMatch[1];
+  }
+
+  try {
+    const url = new URL(withoutGit);
+    if (url.hostname.toLowerCase() === "github.com") {
+      return url.pathname.replace(/^\/+/, "");
+    }
+  } catch {
+    // Fall through to a safe default below.
+  }
+
+  return "tabeeb09/oi.loftrop.com";
+}
+
 function installRemoteFile({ host, keyPath, localPath, remotePath }) {
   run("scp", ["-i", keyPath, "-o", "StrictHostKeyChecking=accept-new", localPath, `root@${host}:${remotePath}`]);
 }
@@ -260,6 +291,74 @@ function terraformOutputJson(infraDir) {
 
   const raw = JSON.parse(result.stdout);
   return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, value.value]));
+}
+
+function dnsRecordsForLayout(layout, outputs, domains) {
+  if (layout === "single") {
+    return [
+      [domains.appHost, outputs.single_ipv4],
+      [domains.authHost, outputs.single_ipv4],
+      [domains.baoHost, outputs.single_ipv4],
+      [domains.mediaHost, outputs.single_ipv4],
+      [domains.oauth2Host, outputs.single_ipv4],
+      [domains.rustfsAdminHost, outputs.single_ipv4],
+    ];
+  }
+
+  return [
+    [domains.authHost, outputs.caid_ipv4],
+    [domains.baoHost, outputs.caid_ipv4],
+    [domains.appHost, outputs.website_ipv4],
+    [domains.mediaHost, outputs.storage_ipv4],
+    [domains.oauth2Host, outputs.website_ipv4],
+    [domains.rustfsAdminHost, outputs.storage_ipv4],
+  ];
+}
+
+async function hostResolvesTo(hostname, expectedIp) {
+  try {
+    const records = await lookup(hostname, { all: true, family: 4 });
+    return records.some((record) => record.address === expectedIp);
+  } catch {
+    return false;
+  }
+}
+
+async function waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns) {
+  const records = dnsRecordsForLayout(layout, outputs, domains);
+
+  console.log("");
+  console.log("Required DNS A records:");
+  for (const [host, ip] of records) {
+    console.log(`  ${host} -> ${ip}`);
+  }
+  console.log("");
+
+  if (!waitForDns) {
+    console.log("Skipping DNS wait because waitForDns is false.");
+    return;
+  }
+
+  while (true) {
+    const checks = await Promise.all(records.map(async ([host, ip]) => [host, ip, await hostResolvesTo(host, ip)]));
+    const missing = checks.filter(([, , ok]) => !ok);
+
+    if (missing.length === 0) {
+      console.log("DNS records resolve to the expected VPS IPs.");
+      return;
+    }
+
+    console.log("DNS is not ready yet for:");
+    for (const [host, ip] of missing) {
+      console.log(`  ${host} -> ${ip}`);
+    }
+
+    const answer = (await prompt(rl, "Update DNS, then press Enter to re-check, or type skip", "")).toLowerCase();
+    if (answer === "skip") {
+      console.log("Continuing without confirmed DNS. HTTPS/domain-dependent setup may fail.");
+      return;
+    }
+  }
 }
 
 async function main() {
@@ -369,8 +468,15 @@ async function main() {
       rl,
       config,
       "githubToken",
-      "GitHub token for runner auto-registration and repo variables",
+      "GitHub token for runner auto-registration and repo variables (blank to skip)",
       false,
+    );
+    const githubRepository = await promptConfig(
+      rl,
+      config,
+      "githubRepository",
+      "GitHub repository for self-hosted runner",
+      githubRepositoryFromUrl(websiteRepoUrl),
     );
     const applyNow =
       config.applyNow === undefined
@@ -380,6 +486,10 @@ async function main() {
       config.configureNow === undefined
         ? (await prompt(rl, "SSH into created VPSes and run setup after apply? yes/no", "yes")).toLowerCase() === "yes"
         : boolFromConfig(config.configureNow, true);
+    const waitForDns =
+      config.waitForDns === undefined
+        ? true
+        : boolFromConfig(config.waitForDns, true);
 
     const keyPath = path.join(generatedDir, "hetzner-bootstrap-ed25519");
     const sshKey = ensureSshKey(keyPath);
@@ -440,6 +550,7 @@ async function main() {
       websiteRepoRef,
       caidRepoUrl,
       caidRepoRef,
+      githubRepository,
       googleClientId: googleClientId || undefined,
       googleClientSecret: googleClientSecret || undefined,
       allowedEmails: allowedEmails || undefined,
@@ -468,8 +579,11 @@ async function main() {
     console.log(`Terraform outputs written to ${outputsPath}`);
 
     if (!configureNow) {
+      await waitForDnsIfNeeded(rl, layout, outputs, domains, false);
       return;
     }
+
+    await waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns);
 
     const caidEnvPath = path.join(generatedDir, "caid.env");
     writeEnvFile(caidEnvPath, {
@@ -603,6 +717,31 @@ async function main() {
         keyPath,
         command: `cd /srv/website/app && APP_HOST='${domains.appHost}' MEDIA_HOST='${domains.mediaHost}' RUSTFS_ADMIN_HOST='${domains.rustfsAdminHost}' OAUTH2_PROXY_HOST='${domains.oauth2Host}' bash scripts/configure-single-vps-routing.sh`,
       });
+
+      if (githubToken) {
+        console.log("Registering GitHub self-hosted runner and enabling local deploy mode...");
+        const runnerEnvPath = path.join(generatedDir, "github-runner.env");
+        writeShellEnvFile(runnerEnvPath, {
+          GITHUB_TOKEN: githubToken,
+          GITHUB_REPOSITORY: githubRepository,
+          RUNNER_LABELS: "website-deploy,private-network",
+          DEPLOY_PATH: "/srv/website/app",
+          PROJECT_NAME: "website",
+          NONINTERACTIVE: "1",
+        });
+        installRemoteFile({
+          host: websiteHost,
+          keyPath,
+          localPath: runnerEnvPath,
+          remotePath: "/tmp/github-runner.env",
+        });
+        ssh({
+          host: websiteHost,
+          keyPath,
+          command:
+            "set -a && . /tmp/github-runner.env && set +a && rm -f /tmp/github-runner.env && cd /srv/website/app && bash scripts/setup-github-self-hosted-runner.sh",
+        });
+      }
       console.log(`Single VPS configured: ${websiteHost}`);
     } else {
       console.log("CAId is configured. Storage and website VPSes received AppRole credentials.");
@@ -611,8 +750,8 @@ async function main() {
       console.log("  cd /srv/website/app && USE_LOCAL_RUSTFS_NETWORK=false bash scripts/website-stack-vps.sh app   # on website");
     }
 
-    if (githubToken) {
-      console.log("GitHub token was provided. Use scripts/setup-github-self-hosted-runner.sh on the private runner host to finish runner registration.");
+    if (githubToken && layout !== "single") {
+      console.log("GitHub token was provided, but automatic runner registration is currently implemented for single-VPS layout only.");
     }
   } finally {
     rl.close();

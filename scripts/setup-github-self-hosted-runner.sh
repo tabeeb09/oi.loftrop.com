@@ -10,6 +10,9 @@ RUNNER_GROUP="${RUNNER_GROUP:-Default}"
 RUNNER_VERSION="${RUNNER_VERSION:-}"
 DEPLOY_PATH="${DEPLOY_PATH:-/srv/website/app}"
 PROJECT_NAME="${PROJECT_NAME:-website}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+GITHUB_RUNNER_REGISTRATION_TOKEN="${GITHUB_RUNNER_REGISTRATION_TOKEN:-}"
+NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
 require_root() {
   if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
@@ -203,19 +206,24 @@ main() {
   require_root
   install_dependencies
 
-  prompt_default GITHUB_REPOSITORY "GitHub repository" "$GITHUB_REPOSITORY"
-  prompt_default RUNNER_USER "Local Linux user for the runner" "$RUNNER_USER"
-  prompt_default RUNNER_ROOT "Runner install directory" "$RUNNER_ROOT"
-  prompt_default RUNNER_NAME "Runner name" "$RUNNER_NAME"
-  prompt_default RUNNER_LABELS "Runner labels, comma-separated" "$RUNNER_LABELS"
+  if [[ "$NONINTERACTIVE" != "1" ]]; then
+    prompt_default GITHUB_REPOSITORY "GitHub repository" "$GITHUB_REPOSITORY"
+    prompt_default RUNNER_USER "Local Linux user for the runner" "$RUNNER_USER"
+    prompt_default RUNNER_ROOT "Runner install directory" "$RUNNER_ROOT"
+    prompt_default RUNNER_NAME "Runner name" "$RUNNER_NAME"
+    prompt_default RUNNER_LABELS "Runner labels, comma-separated" "$RUNNER_LABELS"
+  fi
 
-  local github_token=""
-  local registration_token=""
-  prompt_secret github_token "GitHub token with repo admin access, or leave blank to paste runner registration token"
+  local github_token="$GITHUB_TOKEN"
+  local registration_token="$GITHUB_RUNNER_REGISTRATION_TOKEN"
+
+  if [[ "$NONINTERACTIVE" != "1" && -z "$github_token" && -z "$registration_token" ]]; then
+    prompt_secret github_token "GitHub token with repo admin access, or leave blank to paste runner registration token"
+  fi
 
   if [[ -n "$github_token" ]]; then
     registration_token="$(get_registration_token "$github_token")"
-  else
+  elif [[ "$NONINTERACTIVE" != "1" ]]; then
     prompt_secret registration_token "GitHub runner registration token"
   fi
 

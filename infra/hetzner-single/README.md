@@ -44,3 +44,5 @@ Authorized redirect URI: https://oi.loftrop.com/api/auth/callback/google
 ```
 
 Generated output is written under `.generated/hetzner/`, which is ignored by git.
+
+After Terraform creates the VPS, the bootstrapper prints the required DNS `A` records and waits for them to resolve before continuing. This is necessary because the VPS IP is only known after provisioning.

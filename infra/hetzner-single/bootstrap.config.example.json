@@ -13,12 +13,14 @@
   "serverType": "cx22",
   "websiteRepoUrl": "https://github.com/owner/website.git",
   "websiteRepoRef": "main",
+  "githubRepository": "owner/website",
   "caidRepoUrl": "https://github.com/tabeeb09/caid.git",
   "caidRepoRef": "main",
   "initialOwnerEmail": "owner@example.com",
   "googleClientId": "",
   "googleClientSecret": "",
   "allowedEmails": "",
-  "applyNow": false,
-  "configureNow": false
+  "waitForDns": true,
+  "applyNow": true,
+  "configureNow": true
 }
