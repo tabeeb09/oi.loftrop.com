@@ -180,7 +180,19 @@ configure_runner() {
 
 install_service() {
   cd "$RUNNER_ROOT"
-  ./svc.sh install "$RUNNER_USER"
+  local service_name
+  service_name="$(./svc.sh status 2>/dev/null | awk '/actions\\.runner\\./ { print $2; exit }' || true)"
+
+  if [[ -n "$service_name" ]] && systemctl list-unit-files "$service_name" >/dev/null 2>&1; then
+    systemctl enable "$service_name" >/dev/null 2>&1 || true
+    systemctl restart "$service_name"
+    return
+  fi
+
+  if ! ./svc.sh install "$RUNNER_USER"; then
+    ./svc.sh start
+    return
+  fi
   ./svc.sh start
 }
 
