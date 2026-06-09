@@ -198,6 +198,9 @@ useEffect(() => {
                       <a href="/hhg" onClick={e => { /* stub */ }}>UCL Attosecond Particle Physics Research Project</a> 
                       <a href="https://github.com/tabeeb09/oi.loftrop.com" onClick={e => { /* stub */ }}>Web Development</a>
                       <a href="/neuromorphic" onClick={e => { /* stub */ }}>Memristors & Spiking Neural Nets</a>
+                      {session?.user?.roles?.includes("owner") && (
+                        <a href="/admin/privilege-requests">Privilege Requests</a>
+                      )}
                     </div>
                   )}
                 <div

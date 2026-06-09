@@ -1,4 +1,5 @@
 import MediaManager from "@/components/cms/MediaManager";
+import PrivilegeRequestButton from "@/components/cms/PrivilegeRequestButton";
 import { getReadRoles, getWriteRoles, requireSession } from "@/src/lib/server/auth";
 import { getMissingSecrets } from "@/src/lib/server/secret-status";
 
@@ -29,6 +30,7 @@ export default async function CmsMediaPage() {
         <p>You are signed in, but your session does not include a CMS read role.</p>
         <p>Expected one of: {getReadRoles().join(", ")}</p>
         <p>Current roles: {userRoles.length ? userRoles.join(", ") : "none detected"}</p>
+        <PrivilegeRequestButton resource="cms/media" requestedRole="media_admin" />
       </div>
     );
   }

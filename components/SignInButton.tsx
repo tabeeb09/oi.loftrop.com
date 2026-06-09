@@ -1,10 +1,6 @@
 'use client';
-import { Metadata } from 'next';
+import Link from 'next/link';
 import { signIn } from 'next-auth/react';
-
-export const metadata: Metadata = {
-  title: "Sign In",
-};
 
 export default function SignInButton() {
   return (
@@ -13,6 +9,9 @@ export default function SignInButton() {
     <button onClick={() => signIn('keycloak', { callbackUrl: '/' })}>
       Sign in with Keycloak
     </button>
+    <Link href="/api/auth/keycloak-register">
+      Sign up with Keycloak
+    </Link>
     <button onClick={() => signIn('google', { callbackUrl: '/' })}>
       Sign in with Google
     </button>

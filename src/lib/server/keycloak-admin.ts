@@ -209,9 +209,58 @@ async function getUserClientRoles(userId: string) {
   return payload.map((role) => role.name).filter(Boolean);
 }
 
+async function getClientRole(roleName: string) {
+  const clientUuid = await getWebsiteClientUuid();
+  const response = await keycloakAdminFetch(
+    `/clients/${clientUuid}/roles/${encodeURIComponent(roleName)}`,
+  );
+
+  if (!response.ok) {
+    throw new Error(`Unable to fetch Keycloak role ${roleName} (${response.status}).`);
+  }
+
+  return (await response.json()) as KeycloakRole;
+}
+
+async function assignClientRole(userId: string, roleName: string) {
+  const clientUuid = await getWebsiteClientUuid();
+  const role = await getClientRole(roleName);
+  const response = await keycloakAdminFetch(
+    `/users/${userId}/role-mappings/clients/${clientUuid}`,
+    {
+      method: "POST",
+      body: JSON.stringify([role]),
+    },
+  );
+
+  if (!response.ok && response.status !== 204) {
+    throw new Error(`Unable to assign Keycloak role ${roleName} (${response.status}).`);
+  }
+}
+
+export async function assignKeycloakClientRoleByEmail(email: string, roleName: string) {
+  const exactMatches = await findUsersByEmail(email);
+
+  if (exactMatches.length !== 1) {
+    throw new Error(`Expected exactly one Keycloak user for ${email}.`);
+  }
+
+  await assignClientRole(exactMatches[0].id, roleName);
+
+  return {
+    user: exactMatches[0],
+    roles: await getUserClientRoles(exactMatches[0].id),
+  };
+}
+
 export async function syncKeycloakUserByEmail(input: SyncInput) {
   const user = await ensureUniqueUserByEmail(input);
-  const roles = await getUserClientRoles(user.id);
+  let roles = await getUserClientRoles(user.id);
+
+  if (!roles.length) {
+    await assignClientRole(user.id, "viewer");
+    roles = await getUserClientRoles(user.id);
+  }
 
   return {
     user,

@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -108,6 +109,18 @@ export async function uploadMediaObject(
       ContentType: contentType || "application/octet-stream",
     }),
   );
+}
+
+export async function getMediaObjectText(key: string) {
+  const client = makeClient();
+  const response = await client.send(
+    new GetObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: cleanPrefix(key),
+    }),
+  );
+
+  return response.Body?.transformToString() ?? "";
 }
 
 export async function deleteMediaObject(key: string) {
