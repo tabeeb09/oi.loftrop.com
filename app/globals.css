@@ -144,7 +144,7 @@ html, body, #__next {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-image: url('/icons/home-icon.svg');
+  background-image: url('https://media.loftrop.com/public-media/icons/home-icon.svg');
   background-repeat: no-repeat;
   /* allow vertical position to be driven by a CSS variable updated from JS */
   background-position: center var(--home-bg-y, 50%);

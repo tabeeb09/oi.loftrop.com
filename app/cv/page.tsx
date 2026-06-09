@@ -2,6 +2,7 @@ import AuthNav from "@/components/AuthNav";
 import VerticalNavBar from "@/components/VerticalNavBartest";
 import { requireAllowed } from "@/components/requireAllowed";
 import CvPdfClient from "@/components/CvPdfClient";
+import { mediaUrl } from "@/src/lib/media-url";
 
 
 export default async function Home() {
@@ -15,7 +16,7 @@ export default async function Home() {
 
         <div className="app-content">
           <div className="pdf-wrap">
-            <CvPdfClient url="/pdfs/cv.pdf" />
+            <CvPdfClient url={mediaUrl("pdfs/cv.pdf")} />
           </div>
         </div>
       </main>

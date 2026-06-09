@@ -2,6 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 import { useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "react";
+import { mediaUrl } from "@/src/lib/media-url";
 import "./VerticalNavBar.css";
 
 interface TreeNode {
@@ -152,7 +153,7 @@ useEffect(() => {
             aria-label="Open sidebar"
           >
             <img
-              src="/icons/portfolio-icon.svg"
+              src={mediaUrl("icons/portfolio-icon.svg")}
               className="nav-collapsed-icon"
               alt="portfolio"
               style={{ width: 'var(--collapsed-icon-size,40px)', height: 'var(--collapsed-icon-size,40px)' }}
@@ -164,7 +165,7 @@ useEffect(() => {
             }}
             aria-label="Go to CV">
             <img
-              src="/icons/page-icon.svg"
+              src={mediaUrl("icons/page-icon.svg")}
               className="nav-collapsed-icon"
               alt="CV"
               style={{ width: 'var(--collapsed-icon-size,40px)', height: 'var(--collapsed-icon-size,40px)' }}
@@ -183,7 +184,7 @@ useEffect(() => {
                 >
                   {/* Profile header shows the user identifier without a wand icon. */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <img className="nav-home-icon" src="/icons/portfolio-icon.svg" alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
+                    <img className="nav-home-icon" src={mediaUrl("icons/portfolio-icon.svg")} alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
                     
                   </div>
                   <span className="nav-node-name" style={{ flex: 1, paddingLeft: '0.5rem', fontSize: '1.25rem' , fontWeight: 'bold' }}>
@@ -195,9 +196,9 @@ useEffect(() => {
                     <div className="nav-profile-sub">
                       <a href="/climate_data_analysis" onClick={e => { /* stub */ }}>Climate Change Data Science</a>
                       <a href="/hhg" onClick={e => { /* stub */ }}>UCL Attosecond Particle Physics Research Project</a> 
+                      <a href="/rahman-tabeeb-report" onClick={e => { /* stub */ }}>Rahman Tabeeb Report</a>
                       <a href="https://github.com/tabeeb09/oi.loftrop.com" onClick={e => { /* stub */ }}>Web Development</a>
                       <a href="/neuromorphic" onClick={e => { /* stub */ }}>Memristors & Spiking Neural Nets</a>
-                      <a href="/agentic" onClick={e => { /* stub */ }}>Agentic Web Automation</a>
                     </div>
                   )}
                 <div
@@ -206,7 +207,7 @@ useEffect(() => {
                 >
                   {/* Profile header shows the user identifier without a wand icon. */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <img className="nav-home-icon" src="/icons/page-icon.svg" alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
+                    <img className="nav-home-icon" src={mediaUrl("icons/page-icon.svg")} alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
                     
                   </div>
                   <span className="nav-node-name" style={{ flex: 1, paddingLeft: '0.5rem', fontSize: '1.25rem' , fontWeight: 'bold' }}>
@@ -276,7 +277,7 @@ useEffect(() => {
                   >
                     <img
                       className="nav-home-icon"
-                      src="/icons/portfolio-icon.svg"
+                      src={mediaUrl("icons/portfolio-icon.svg")}
                       alt="portfolio"
                       style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)', flex: '0 0 auto' }}
                     />

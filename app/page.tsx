@@ -6,6 +6,7 @@ import HeroPhotoFrame from "@/components/HeroPhotoFrame";
 import SectionBlock from "@/components/SectionBlock";
 import SkillGroup from "@/components/SkillGroup";
 import ExperienceCard from "@/components/ExperienceCard";
+import { mediaUrl } from "@/src/lib/media-url";
 
 const bestGrades = [
   { id: "presentation", module: "Scientific Presentation", grade: "100%" },
@@ -95,7 +96,7 @@ return (
           <section className="row g-4 align-items-center mb-5">
             <div className="col-12 col-md-4">
               <HeroPhotoFrame
-                src="/images/tabeeb-photo.jpg"
+                src={mediaUrl("images/tabeeb-photo.jpg")}
                 alt="Photo of Tabeeb Rahman"
                 
               />
@@ -187,7 +188,7 @@ return (
                   role={<strong>Project Lead</strong>}
                   org="Team Bath Drones"
                   meta="2023–2024 • 2nd place, IMechE European Division UAV Competition"
-                  imageSrc="/images/team-bath-uav.jpg"
+                  imageSrc={mediaUrl("images/team-bath-uav.jpg")}
                   imageAlt="Team Bath UAV competition"
                   imageLink="https://www.bath.ac.uk/announcements/team-bath-drones-take-second-place-in-world-contest/"
                 >

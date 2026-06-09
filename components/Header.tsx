@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, MouseEvent as ReactMouseEvent } from "reac
 import { useSession, signOut } from "next-auth/react";
 import "./VerticalNavBar.css";
 import HeaderButton from "./HeaderButton";
+import { mediaUrl } from "@/src/lib/media-url";
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -14,7 +15,7 @@ export default function Header() {
       <div className="header-inner" style={{ height: '100%' }}>
         <div className="header-left">
           <a href="/" className="nav-home-link"  style={{ paddingLeft: '0rem' }} onClick={e => { /* stub */ }}>
-            <img className="nav-home-icon" src="/icons/home-icon.svg" alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
+            <img className="nav-home-icon" src={mediaUrl("icons/home-icon.svg")} alt="home icon" style={{ width: 'var(--home-icon-size, 40px)', height: 'var(--home-icon-size, 40px)' }}/>
           </a>
         </div>
         <div className="header-left">
