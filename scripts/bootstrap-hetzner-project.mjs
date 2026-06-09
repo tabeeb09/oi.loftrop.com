@@ -373,6 +373,10 @@ function parseEnvContent(content) {
   return values;
 }
 
+function isValidOauth2CookieSecret(value) {
+  return [16, 24, 32].includes(Buffer.byteLength(String(value ?? ""), "utf8"));
+}
+
 function shellQuote(value) {
   return `'${String(value ?? "").replace(/'/g, "'\"'\"'")}'`;
 }
@@ -751,7 +755,7 @@ async function main() {
       oauth2ProxyClientSecret: randomB64Url(32),
       rustfsAccessKeyId: `rustfs-${randomB64Url(18)}`,
       rustfsSecretAccessKey: randomB64Url(32),
-      oauth2ProxyCookieSecret: crypto.randomBytes(32).toString("base64"),
+      oauth2ProxyCookieSecret: crypto.randomBytes(16).toString("hex"),
     };
 
     const tfvars = {
@@ -899,10 +903,9 @@ async function main() {
       ),
       RUSTFS_ACCESS_KEY_ID: keepExisting("RUSTFS_ACCESS_KEY_ID", generatedSecrets.rustfsAccessKeyId),
       RUSTFS_SECRET_ACCESS_KEY: keepExisting("RUSTFS_SECRET_ACCESS_KEY", generatedSecrets.rustfsSecretAccessKey),
-      OAUTH2_PROXY_COOKIE_SECRET: keepExisting(
-        "OAUTH2_PROXY_COOKIE_SECRET",
-        generatedSecrets.oauth2ProxyCookieSecret,
-      ),
+      OAUTH2_PROXY_COOKIE_SECRET: isValidOauth2CookieSecret(existingCaidEnv.OAUTH2_PROXY_COOKIE_SECRET)
+        ? existingCaidEnv.OAUTH2_PROXY_COOKIE_SECRET
+        : generatedSecrets.oauth2ProxyCookieSecret,
     });
 
     console.log("Configuring CAId VPS...");
