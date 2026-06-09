@@ -5,6 +5,8 @@ CAID_HOME="${CAID_HOME:-/srv/caid}"
 CAID_CADDY_CONTAINER="${CAID_CADDY_CONTAINER:-caid-caddy-1}"
 APP_NETWORK="${APP_NETWORK:-app_edge}"
 RUSTFS_NETWORK="${RUSTFS_NETWORK:-rustfs_internal}"
+AUTH_HOST="${AUTH_HOST:-auth.loftrop.com}"
+BAO_HOST="${BAO_HOST:-bao.loftrop.com}"
 APP_HOST="${APP_HOST:?APP_HOST is required}"
 WEBSITE_ALIAS_HOSTS="${WEBSITE_ALIAS_HOSTS:-}"
 MEDIA_HOST="${MEDIA_HOST:?MEDIA_HOST is required}"
@@ -20,6 +22,7 @@ require_root() {
 
 connect_network_if_needed() {
   local network="$1"
+  shift || true
 
   if ! docker network inspect "$network" >/dev/null 2>&1; then
     echo "Docker network does not exist yet: $network" >&2
@@ -27,10 +30,14 @@ connect_network_if_needed() {
   fi
 
   if docker inspect "$CAID_CADDY_CONTAINER" --format '{{json .NetworkSettings.Networks}}' | grep -q "\"$network\""; then
+    if [[ "$#" -gt 0 ]]; then
+      docker network disconnect "$network" "$CAID_CADDY_CONTAINER"
+      docker network connect "$@" "$network" "$CAID_CADDY_CONTAINER"
+    fi
     return
   fi
 
-  docker network connect "$network" "$CAID_CADDY_CONTAINER"
+  docker network connect "$@" "$network" "$CAID_CADDY_CONTAINER"
 }
 
 write_routes() {
@@ -82,7 +89,7 @@ EOF
 
 main() {
   require_root
-  connect_network_if_needed "$APP_NETWORK"
+  connect_network_if_needed "$APP_NETWORK" --alias "$AUTH_HOST" --alias "$BAO_HOST" --alias caid-caddy
   connect_network_if_needed "$RUSTFS_NETWORK"
   write_routes
   docker restart "$CAID_CADDY_CONTAINER" >/dev/null
