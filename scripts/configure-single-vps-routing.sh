@@ -3,6 +3,8 @@ set -euo pipefail
 
 CAID_HOME="${CAID_HOME:-/srv/caid}"
 CAID_CADDY_CONTAINER="${CAID_CADDY_CONTAINER:-caid-caddy-1}"
+APP_NETWORK="${APP_NETWORK:-app_edge}"
+RUSTFS_NETWORK="${RUSTFS_NETWORK:-rustfs_internal}"
 APP_HOST="${APP_HOST:?APP_HOST is required}"
 WEBSITE_ALIAS_HOSTS="${WEBSITE_ALIAS_HOSTS:-}"
 MEDIA_HOST="${MEDIA_HOST:?MEDIA_HOST is required}"
@@ -80,8 +82,8 @@ EOF
 
 main() {
   require_root
-  connect_network_if_needed app_internal
-  connect_network_if_needed rustfs_internal
+  connect_network_if_needed "$APP_NETWORK"
+  connect_network_if_needed "$RUSTFS_NETWORK"
   write_routes
   docker restart "$CAID_CADDY_CONTAINER" >/dev/null
   echo "Single-VPS routing configured through $CAID_CADDY_CONTAINER."
