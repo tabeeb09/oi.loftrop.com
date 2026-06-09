@@ -121,9 +121,9 @@ set_repo_variable() {
     "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/variables")"
 
   if [[ "$status" != "201" ]]; then
-    echo "Failed to set GitHub variable $name. HTTP $status:" >&2
+    echo "Warning: failed to set GitHub variable $name. HTTP $status:" >&2
     cat /tmp/github-variable-response.json >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -245,11 +245,11 @@ main() {
   if [[ -n "$github_token" ]]; then
     local labels_json
     labels_json="$(printf '%s' "$RUNNER_LABELS" | jq -Rc 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0)) | ["self-hosted", "linux"] + . | unique')"
-    set_repo_variable "$github_token" DEPLOY_MODE local
-    set_repo_variable "$github_token" DEPLOY_RUNNER_LABELS "$labels_json"
-    set_repo_variable "$github_token" USE_LOCAL_RUSTFS_NETWORK true
-    set_repo_variable "$github_token" APP_EXTRA_COMPOSE_FILES docker-compose.website-only.same-vm-auth.override.yaml
-    set_repo_variable "$github_token" RUSTFS_EXTRA_COMPOSE_FILES docker-compose.rustfs.same-vm-auth.override.yaml
+    set_repo_variable "$github_token" DEPLOY_MODE local || true
+    set_repo_variable "$github_token" DEPLOY_RUNNER_LABELS "$labels_json" || true
+    set_repo_variable "$github_token" USE_LOCAL_RUSTFS_NETWORK true || true
+    set_repo_variable "$github_token" APP_EXTRA_COMPOSE_FILES docker-compose.website-only.same-vm-auth.override.yaml || true
+    set_repo_variable "$github_token" RUSTFS_EXTRA_COMPOSE_FILES docker-compose.rustfs.same-vm-auth.override.yaml || true
   fi
 
   print_required_variables
