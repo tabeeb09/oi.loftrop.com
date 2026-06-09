@@ -361,6 +361,18 @@ function writeEnvFile(filePath, values) {
   writePrivateFile(filePath, `${body}\n`);
 }
 
+function parseEnvContent(content) {
+  const values = {};
+  for (const rawLine of String(content ?? "").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const equalsAt = line.indexOf("=");
+    if (equalsAt <= 0) continue;
+    values[line.slice(0, equalsAt)] = line.slice(equalsAt + 1);
+  }
+  return values;
+}
+
 function shellQuote(value) {
   return `'${String(value ?? "").replace(/'/g, "'\"'\"'")}'`;
 }
@@ -734,6 +746,9 @@ async function main() {
       keycloakDbPassword: randomB64Url(32),
       initialOwnerPassword: randomB64Url(24),
       websiteAuthSecret: randomB64Url(48),
+      websiteClientSecret: randomB64Url(32),
+      websiteAdminSyncClientSecret: randomB64Url(32),
+      oauth2ProxyClientSecret: randomB64Url(32),
       rustfsAccessKeyId: `rustfs-${randomB64Url(18)}`,
       rustfsSecretAccessKey: randomB64Url(32),
       oauth2ProxyCookieSecret: crypto.randomBytes(32).toString("base64"),
@@ -831,6 +846,19 @@ async function main() {
 
     await waitForDnsIfNeeded(rl, layout, outputs, domains, waitForDns);
 
+    const caidHost = layout === "single" ? outputs.single_ipv4 : outputs.caid_ipv4;
+    const storageHost = layout === "single" ? outputs.single_ipv4 : outputs.storage_ipv4;
+    const websiteHost = layout === "single" ? outputs.single_ipv4 : outputs.website_ipv4;
+
+    const existingCaidEnv = parseEnvContent(
+      sshCapture({
+        host: caidHost,
+        keyPath,
+        command: "test -f /etc/caid/caid.env && cat /etc/caid/caid.env || true",
+      }),
+    );
+    const keepExisting = (key, fallback) => existingCaidEnv[key] || fallback;
+
     const caidEnvPath = path.join(generatedDir, "caid.env");
     writeEnvFile(caidEnvPath, {
       AUTH_HOST: domains.authHost,
@@ -838,33 +866,44 @@ async function main() {
       ZTNA_PROVIDER: "none",
       VPN_CIDR: adminCidr,
       KEYCLOAK_BOOTSTRAP_ADMIN_USERNAME: "admin",
-      KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD: generatedSecrets.keycloakBootstrapAdminPassword,
-      KEYCLOAK_DB_PASSWORD: generatedSecrets.keycloakDbPassword,
+      KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD: keepExisting(
+        "KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD",
+        generatedSecrets.keycloakBootstrapAdminPassword,
+      ),
+      KEYCLOAK_DB_PASSWORD: keepExisting("KEYCLOAK_DB_PASSWORD", generatedSecrets.keycloakDbPassword),
       INITIAL_OWNER_USERNAME: "owner",
       INITIAL_OWNER_EMAIL: initialOwnerEmail,
-      INITIAL_OWNER_PASSWORD: generatedSecrets.initialOwnerPassword,
+      INITIAL_OWNER_PASSWORD: keepExisting("INITIAL_OWNER_PASSWORD", generatedSecrets.initialOwnerPassword),
       APP_PUBLIC_URL: domains.appUrl,
       MEDIA_PUBLIC_URL: domains.mediaUrl,
       OAUTH2_PROXY_PUBLIC_URL: domains.oauth2Url,
       RUSTFS_BUCKET: "public-media",
-      GOOGLE_CLIENT_ID: googleClientId,
-      GOOGLE_CLIENT_SECRET: googleClientSecret,
+      GOOGLE_CLIENT_ID: googleClientId || existingCaidEnv.GOOGLE_CLIENT_ID || "",
+      GOOGLE_CLIENT_SECRET: googleClientSecret || existingCaidEnv.GOOGLE_CLIENT_SECRET || "",
       ALLOWED_EMAILS: allowedEmails,
       DNS_PROVIDER: dnsProvider,
       CLOUDFLARE_ZONE_NAME: cloudflareZoneName,
       CLOUDFLARE_ZONE_ID: cloudflareZoneId,
-      CLOUDFLARE_API_TOKEN: cloudflareApiToken,
+      CLOUDFLARE_API_TOKEN: cloudflareApiToken || existingCaidEnv.CLOUDFLARE_API_TOKEN || "",
       CLOUDFLARE_PROXIED: String(cloudflareProxied),
       CLOUDFLARE_TTL: String(cloudflareTtl),
-      WEBSITE_AUTH_SECRET: generatedSecrets.websiteAuthSecret,
-      RUSTFS_ACCESS_KEY_ID: generatedSecrets.rustfsAccessKeyId,
-      RUSTFS_SECRET_ACCESS_KEY: generatedSecrets.rustfsSecretAccessKey,
-      OAUTH2_PROXY_COOKIE_SECRET: generatedSecrets.oauth2ProxyCookieSecret,
+      WEBSITE_AUTH_SECRET: keepExisting("WEBSITE_AUTH_SECRET", generatedSecrets.websiteAuthSecret),
+      WEBSITE_CLIENT_SECRET: keepExisting("WEBSITE_CLIENT_SECRET", generatedSecrets.websiteClientSecret),
+      WEBSITE_ADMIN_SYNC_CLIENT_SECRET: keepExisting(
+        "WEBSITE_ADMIN_SYNC_CLIENT_SECRET",
+        generatedSecrets.websiteAdminSyncClientSecret,
+      ),
+      OAUTH2_PROXY_CLIENT_SECRET: keepExisting(
+        "OAUTH2_PROXY_CLIENT_SECRET",
+        generatedSecrets.oauth2ProxyClientSecret,
+      ),
+      RUSTFS_ACCESS_KEY_ID: keepExisting("RUSTFS_ACCESS_KEY_ID", generatedSecrets.rustfsAccessKeyId),
+      RUSTFS_SECRET_ACCESS_KEY: keepExisting("RUSTFS_SECRET_ACCESS_KEY", generatedSecrets.rustfsSecretAccessKey),
+      OAUTH2_PROXY_COOKIE_SECRET: keepExisting(
+        "OAUTH2_PROXY_COOKIE_SECRET",
+        generatedSecrets.oauth2ProxyCookieSecret,
+      ),
     });
-
-    const caidHost = layout === "single" ? outputs.single_ipv4 : outputs.caid_ipv4;
-    const storageHost = layout === "single" ? outputs.single_ipv4 : outputs.storage_ipv4;
-    const websiteHost = layout === "single" ? outputs.single_ipv4 : outputs.website_ipv4;
 
     console.log("Configuring CAId VPS...");
     installRemoteFile({
