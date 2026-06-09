@@ -1001,7 +1001,7 @@ async function main() {
         host: websiteHost,
         keyPath,
         command:
-          "cd /srv/website/app && RUSTFS_EXTRA_COMPOSE_FILES='' bash scripts/website-stack-vps.sh rustfs && APP_EXTRA_COMPOSE_FILES='' bash scripts/website-stack-vps.sh app",
+          "cd /srv/website/app && bash scripts/website-stack-vps.sh bootstrap && RUSTFS_EXTRA_COMPOSE_FILES='' bash scripts/website-stack-vps.sh rustfs && APP_EXTRA_COMPOSE_FILES='' bash scripts/website-stack-vps.sh app",
       });
       ssh({
         host: websiteHost,
