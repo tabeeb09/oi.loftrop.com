@@ -12,10 +12,6 @@ export default function NeuromorphicPage() {
       <VerticalNavBar />
       <main className="app-main">
         <div className="app-content">
-          <h1>Memristors & Spiking Neural Nets</h1>
-          <p>
-            This report covers memristive systems and spiking neural network research.
-          </p>
           <div className="pdf-wrap">
             <PdfViewer url={mediaUrl("pdfs/RahmanTabeebReport.pdf")} />
           </div>

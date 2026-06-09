@@ -196,7 +196,6 @@ useEffect(() => {
                     <div className="nav-profile-sub">
                       <a href="/climate_data_analysis" onClick={e => { /* stub */ }}>Climate Change Data Science</a>
                       <a href="/hhg" onClick={e => { /* stub */ }}>UCL Attosecond Particle Physics Research Project</a> 
-                      <a href="/rahman-tabeeb-report" onClick={e => { /* stub */ }}>Rahman Tabeeb Report</a>
                       <a href="https://github.com/tabeeb09/oi.loftrop.com" onClick={e => { /* stub */ }}>Web Development</a>
                       <a href="/neuromorphic" onClick={e => { /* stub */ }}>Memristors & Spiking Neural Nets</a>
                     </div>
