@@ -39,6 +39,10 @@ services:
       BAO_SECRET_PATH_RUSTFS: ${BAO_SECRET_PATH_RUSTFS:-rustfs/prod}
       BAO_SECRET_PATH_OAUTH2_PROXY: ${BAO_SECRET_PATH_OAUTH2_PROXY:-oauth2-proxy/prod}
       BAO_SECRET_PATH_KEYCLOAK: ${BAO_SECRET_PATH_KEYCLOAK:-keycloak/prod}
+      BAO_CONFIG_REQUEST_PATH: ${BAO_CONFIG_REQUEST_PATH:-caid/config-requests}
+      BAO_APPROLE_AUTH_PATH: ${BAO_APPROLE_AUTH_PATH:-approle}
+      OPENBAO_ROLE_ID: ${OPENBAO_ROLE_ID:-}
+      OPENBAO_SECRET_ID: ${OPENBAO_SECRET_ID:-}
     expose:
       - "3000"
     networks:

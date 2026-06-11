@@ -35,6 +35,12 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: optionalNonEmptyString,
   GOOGLE_CLIENT_SECRET: optionalNonEmptyString,
   ALLOWED_EMAILS: z.string().optional(),
+  BAO_ADDR: optionalUrl,
+  BAO_KV_MOUNT: z.string().default("kv"),
+  BAO_CONFIG_REQUEST_PATH: z.string().default("caid/config-requests"),
+  BAO_APPROLE_AUTH_PATH: z.string().default("approle"),
+  OPENBAO_ROLE_ID: optionalNonEmptyString,
+  OPENBAO_SECRET_ID: optionalNonEmptyString,
 });
 
 export const env = envSchema.parse(process.env);

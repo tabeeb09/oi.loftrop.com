@@ -254,6 +254,15 @@ async function main() {
   }
 
   writeFileSafely(path.join(rootDir, ".env.runtime"), toEnvBlock(aggregated));
+  if (config.roleId && config.secretId) {
+    aggregated.OPENBAO_ROLE_ID = config.roleId;
+    aggregated.OPENBAO_SECRET_ID = config.secretId;
+    aggregated.BAO_APPROLE_AUTH_PATH = config.appRoleAuthPath;
+    aggregated.BAO_KV_MOUNT = config.kvMount;
+    aggregated.BAO_CONFIG_REQUEST_PATH =
+      process.env.BAO_CONFIG_REQUEST_PATH || "caid/config-requests";
+    writeFileSafely(path.join(rootDir, ".env.runtime"), toEnvBlock(aggregated));
+  }
   console.log("OpenBao secrets fetched and runtime env files updated.");
   console.log(`Secret status report written to ${statusFile}`);
 }
