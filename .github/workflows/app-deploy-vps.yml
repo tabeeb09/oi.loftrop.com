@@ -169,6 +169,29 @@ jobs:
           cd "${DEPLOY_PATH}"
           sudo BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE}" PROJECT_ROOT="${DEPLOY_PATH}" PROJECT_NAME="${PROJECT_NAME}" bash scripts/website-stack-vps.sh bootstrap
 
+      - name: Converge CAId locally when present
+        if: env.DEPLOY_MODE == 'local'
+        run: |
+          if test ! -d /srv/caid/.git; then
+            echo "CAId repo is not present on this runner; skipping CAId converge."
+            exit 0
+          fi
+
+          cd /srv/caid
+          sudo git config --global --add safe.directory /srv/caid
+          sudo git fetch --all --tags --prune
+          sudo git checkout main
+          sudo git reset --hard origin/main
+          set +e
+          sudo bash scripts/caid-converge.sh --mode noninteractive
+          status="$?"
+          set -e
+          if test "$status" = "20"; then
+            echo "CAId converge published pending human config requests."
+            exit 0
+          fi
+          exit "$status"
+
       - name: Deploy requested stack on VPS
         if: env.DEPLOY_MODE == 'ssh'
         env:
