@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AuthError, requireRole } from "@/src/lib/server/auth";
+import { auditLog, sessionActor } from "@/src/lib/server/audit-log";
 import { forbidden, unauthorized } from "@/src/lib/server/cms-api";
 import { assignKeycloakClientRoleByEmail } from "@/src/lib/server/keycloak-admin";
 import {
@@ -12,7 +13,20 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-const assignableRoles = new Set(["viewer", "editor", "media_admin", "owner"]);
+const assignableRoles = new Set([
+  "viewer",
+  "editor",
+  "media_admin",
+  "owner",
+  "infra_admin",
+  "identity_hr_manager",
+  "config_admin",
+  "audit_admin",
+  "logging_admin",
+  "openbao_admin",
+  "rustfs_admin",
+  "netbird_admin",
+]);
 
 export async function POST(request: Request, context: RouteContext) {
   try {
@@ -42,10 +56,23 @@ export async function POST(request: Request, context: RouteContext) {
       session.user?.email ?? "owner",
       role,
     );
+    auditLog({
+      action: "privilege_request.approve",
+      result: "success",
+      ...sessionActor(session),
+      resource: current.resource,
+      target: current.email,
+      metadata: { requestId: id, assignedRole: role },
+    });
 
     return NextResponse.json({ request: updated });
   } catch (error) {
     if (error instanceof AuthError) {
+      auditLog({
+        action: "privilege_request.approve",
+        result: error.status === 401 ? "failure" : "denied",
+        message: error.message,
+      });
       return error.status === 401 ? unauthorized() : forbidden();
     }
 

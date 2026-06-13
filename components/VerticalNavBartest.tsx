@@ -204,6 +204,9 @@ useEffect(() => {
                       {session?.user?.roles?.some((role) => role === "owner" || role === "config_admin") && (
                         <a href="/admin/config-requests">Config Requests</a>
                       )}
+                      {session?.user?.roles?.some((role) => role === "owner" || role === "audit_admin" || role === "logging_admin") && (
+                        <a href="/admin/logs">Audit Logs</a>
+                      )}
                     </div>
                   )}
                 <div

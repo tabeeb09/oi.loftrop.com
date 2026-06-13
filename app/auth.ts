@@ -5,6 +5,7 @@ import { decodeJwt } from "jose";
 
 import { env, getAuthSecret } from "@/src/lib/server/env";
 import { syncKeycloakUserByEmail } from "@/src/lib/server/keycloak-admin";
+import { auditLog } from "@/src/lib/server/audit-log";
 import { extractRoles } from "@/src/lib/server/roles";
 
 const providers = [];
@@ -34,17 +35,32 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       if (!user.email) {
+        auditLog({
+          action: "auth.sign_in",
+          result: "failure",
+          actorName: user.name,
+          message: "Sign-in rejected because provider did not return an email address.",
+          metadata: { provider: account?.provider ?? "unknown" },
+        });
         return false;
       }
 
       if (account?.provider === "google" && profile && "email_verified" in profile) {
         if (!profile.email_verified) {
+          auditLog({
+            action: "auth.sign_in",
+            result: "failure",
+            actorEmail: user.email,
+            actorName: user.name,
+            message: "Google sign-in rejected because email was not verified.",
+            metadata: { provider: account.provider },
+          });
           return false;
         }
       }
 
       try {
-        await syncKeycloakUserByEmail({
+        const synced = await syncKeycloakUserByEmail({
           email: user.email,
           name: user.name,
           provider: account?.provider,
@@ -53,8 +69,25 @@ export const authOptions: NextAuthOptions = {
               ? Boolean(profile.email_verified)
               : true,
         });
+        auditLog({
+          action: "auth.sign_in",
+          result: "success",
+          actorEmail: user.email,
+          actorName: user.name,
+          actorRoles: synced.roles,
+          message: "User signed in and Keycloak account sync completed.",
+          metadata: { provider: account?.provider ?? "unknown" },
+        });
         return true;
-      } catch {
+      } catch (error) {
+        auditLog({
+          action: "auth.sign_in",
+          result: "failure",
+          actorEmail: user.email,
+          actorName: user.name,
+          message: error instanceof Error ? error.message : "Keycloak account sync failed.",
+          metadata: { provider: account?.provider ?? "unknown" },
+        });
         return false;
       }
     },

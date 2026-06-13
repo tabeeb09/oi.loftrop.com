@@ -7,6 +7,21 @@ type PrivilegeRequestsAdminProps = {
   initialRequests: PrivilegeRequest[];
 };
 
+const assignableRoles = [
+  "viewer",
+  "editor",
+  "media_admin",
+  "owner",
+  "infra_admin",
+  "identity_hr_manager",
+  "config_admin",
+  "audit_admin",
+  "logging_admin",
+  "openbao_admin",
+  "rustfs_admin",
+  "netbird_admin",
+];
+
 export default function PrivilegeRequestsAdmin({
   initialRequests,
 }: PrivilegeRequestsAdminProps) {
@@ -70,10 +85,11 @@ export default function PrivilegeRequestsAdmin({
                       }))
                     }
                   >
-                    <option value="viewer">viewer</option>
-                    <option value="editor">editor</option>
-                    <option value="media_admin">media_admin</option>
-                    <option value="owner">owner</option>
+                    {assignableRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
                   </select>
                 ) : (
                   request.requestedRole

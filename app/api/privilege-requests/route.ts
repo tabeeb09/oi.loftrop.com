@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { AuthError, getAuthenticatedSession, requireRole } from "@/src/lib/server/auth";
+import { auditLog, sessionActor } from "@/src/lib/server/audit-log";
 import { badRequest, forbidden, unauthorized } from "@/src/lib/server/cms-api";
 import {
   createPrivilegeRequest,
@@ -13,6 +14,11 @@ export async function GET() {
     return NextResponse.json({ requests: await listPrivilegeRequests() });
   } catch (error) {
     if (error instanceof AuthError) {
+      auditLog({
+        action: "privilege_request.list",
+        result: error.status === 401 ? "failure" : "denied",
+        message: error.message,
+      });
       return error.status === 401 ? unauthorized() : forbidden();
     }
 
@@ -44,6 +50,14 @@ export async function POST(request: NextRequest) {
     requestedRole,
     resource,
     reason,
+  });
+  auditLog({
+    action: "privilege_request.create",
+    result: "success",
+    ...sessionActor(session),
+    resource,
+    target: requestedRole,
+    metadata: { requestId: privilegeRequest.id },
   });
 
   return NextResponse.json({ request: privilegeRequest });

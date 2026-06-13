@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { AuthError, requireRole } from "@/src/lib/server/auth";
+import { auditLog, sessionActor } from "@/src/lib/server/audit-log";
 import { forbidden, unauthorized } from "@/src/lib/server/cms-api";
 import { markPrivilegeRequest } from "@/src/lib/server/privilege-requests";
 
@@ -17,10 +18,21 @@ export async function POST(_request: Request, context: RouteContext) {
       "rejected",
       session.user?.email ?? "owner",
     );
+    auditLog({
+      action: "privilege_request.reject",
+      result: "success",
+      ...sessionActor(session),
+      metadata: { requestId: id },
+    });
 
     return NextResponse.json({ request: updated });
   } catch (error) {
     if (error instanceof AuthError) {
+      auditLog({
+        action: "privilege_request.reject",
+        result: error.status === 401 ? "failure" : "denied",
+        message: error.message,
+      });
       return error.status === 401 ? unauthorized() : forbidden();
     }
 
