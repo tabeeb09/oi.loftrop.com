@@ -1,22 +1,10 @@
-"use client";
+import PaperArticle from "@/components/PaperArticle";
+import { papers } from "@/src/lib/papers";
 
-import VerticalNavBar from "@/components/VerticalNavBartest";
-import { mediaUrl } from "@/src/lib/media-url";
-import dynamic from "next/dynamic";
-
-const PdfViewer = dynamic(() => import("@/components/PdfViewer"), { ssr: false });
+export const metadata = {
+  title: papers.neuromorphic.title,
+};
 
 export default function NeuromorphicPage() {
-  return (
-    <div className="app-shell">
-      <VerticalNavBar />
-      <main className="app-main">
-        <div className="app-content">
-          <div className="pdf-wrap">
-            <PdfViewer url={mediaUrl("pdfs/RahmanTabeebReport.pdf")} />
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+  return <PaperArticle paper={papers.neuromorphic} />;
 }

@@ -1,28 +1,10 @@
-"use client";
+import PaperArticle from "@/components/PaperArticle";
+import { papers } from "@/src/lib/papers";
 
-import AuthNav from "@/components/AuthNav";
-import VerticalNavBar from "@/components/VerticalNavBartest";
-import { mediaUrl } from "@/src/lib/media-url";
-import dynamic from "next/dynamic";
+export const metadata = {
+  title: papers.hhg.title,
+};
 
-const PdfViewer = dynamic(() => import("@/components/PdfViewer"), { ssr: false });
-
-
-
-export default function Home() {
-  return (
-    <div className="app-shell">
-      <VerticalNavBar />
-
-      <main className="app-main">
-        
-
-        <div className="app-content">
-          <div className="pdf-wrap">
-            <PdfViewer url={mediaUrl("pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf")} />
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+export default function HhgPage() {
+  return <PaperArticle paper={papers.hhg} />;
 }

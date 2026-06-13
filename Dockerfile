@@ -26,6 +26,9 @@ RUN adduser -S nextjs -u 1001
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+RUN mkdir -p scripts src/lib
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/upload-site-resources.mjs ./scripts/upload-site-resources.mjs
+COPY --from=builder --chown=nextjs:nodejs /app/src/lib/resource-schema-data.json ./src/lib/resource-schema-data.json
 
 USER nextjs
 

@@ -1,0 +1,114 @@
+[
+  {
+    "id": "icon.home",
+    "kind": "icon",
+    "title": "Home icon",
+    "key": "icons/home-icon.svg",
+    "localPath": "public/icons/home-icon.svg"
+  },
+  {
+    "id": "icon.portfolio",
+    "kind": "icon",
+    "title": "Portfolio icon",
+    "key": "icons/portfolio-icon.svg",
+    "localPath": "public/icons/portfolio-icon.svg"
+  },
+  {
+    "id": "icon.page",
+    "kind": "icon",
+    "title": "Page icon",
+    "key": "icons/page-icon.svg",
+    "localPath": "public/icons/page-icon.svg"
+  },
+  {
+    "id": "icon.prototypePortfolio",
+    "kind": "icon",
+    "title": "Prototype portfolio icon",
+    "key": "icons/prototype-portfolio-icon.svg",
+    "localPath": "public/icons/prototype portfolio-icon.svg"
+  },
+  {
+    "id": "icon.file",
+    "kind": "icon",
+    "title": "File icon",
+    "key": "icons/file.svg",
+    "localPath": "public/icons/file.svg"
+  },
+  {
+    "id": "icon.globe",
+    "kind": "icon",
+    "title": "Globe icon",
+    "key": "icons/globe.svg",
+    "localPath": "public/icons/globe.svg"
+  },
+  {
+    "id": "icon.next",
+    "kind": "icon",
+    "title": "Next.js icon",
+    "key": "icons/next.svg",
+    "localPath": "public/icons/next.svg"
+  },
+  {
+    "id": "image.profile",
+    "kind": "image",
+    "title": "Profile photograph",
+    "key": "images/tabeeb-photo.jpg",
+    "localPath": "public/images/tabeeb-photo.jpg"
+  },
+  {
+    "id": "image.teamBathUav",
+    "kind": "image",
+    "title": "Team Bath UAV",
+    "key": "images/team-bath-uav.jpg",
+    "localPath": "public/images/team-bath-uav.jpg"
+  },
+  {
+    "id": "pdf.hhg",
+    "kind": "pdf",
+    "title": "High Harmonic Generation with Plasmonic Enhancements",
+    "key": "pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf",
+    "localPath": "public/pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf"
+  },
+  {
+    "id": "pdf.climate",
+    "kind": "pdf",
+    "title": "Climate Data Analysis",
+    "key": "pdfs/Climate-Data-Analysis.pdf",
+    "localPath": "public/pdfs/Climate-Data-Analysis.pdf"
+  },
+  {
+    "id": "pdf.cv",
+    "kind": "pdf",
+    "title": "Curriculum Vitae",
+    "key": "pdfs/cv.pdf",
+    "localPath": "public/pdfs/cv.pdf"
+  },
+  {
+    "id": "pdf.neuromorphic",
+    "kind": "pdf",
+    "title": "Memristors and Spiking Neural Networks Report",
+    "key": "pdfs/RahmanTabeebReport.pdf",
+    "localPath": "public/pdfs/RahmanTabeebReport.pdf"
+  },
+  {
+    "id": "presentation.hhg",
+    "kind": "presentation",
+    "title": "High Harmonic Generation presentation",
+    "key": "presentations/High-Harmonic-Generation-with-Plasmonic-Enhancements.pptx",
+    "localPath": "public/Presentations/High Harmonic Generation with Plasmonic Enhancements.pptx"
+  },
+  {
+    "id": "static.vercel",
+    "kind": "static",
+    "title": "Vercel mark",
+    "key": "static/vercel.svg",
+    "localPath": "public/vercel.svg"
+  },
+  {
+    "id": "static.window",
+    "kind": "static",
+    "title": "Window mark",
+    "key": "static/window.svg",
+    "localPath": "public/window.svg"
+  }
+]

@@ -155,6 +155,17 @@ deploy_app() {
   PROJECT_ROOT="$PROJECT_ROOT" PROJECT_NAME="$PROJECT_NAME" STATE_DIR="$STATE_DIR" APP_COMPOSE_PROJECT="$APP_COMPOSE_PROJECT" USE_LOCAL_RUSTFS_NETWORK="$USE_LOCAL_RUSTFS_NETWORK" APP_EXTRA_COMPOSE_FILES="$APP_EXTRA_COMPOSE_FILES" bash ./scripts/deploy-app-vps.sh
 }
 
+upload_site_resources() {
+  cd "$PROJECT_ROOT"
+  if [[ ! -f "$DEPLOY_ENV_FILE" ]]; then
+    echo "Skipping site resource upload; missing $DEPLOY_ENV_FILE." >&2
+    return
+  fi
+
+  mapfile -t app_files < <(app_compose_files)
+  docker compose -p "$APP_COMPOSE_PROJECT" "${app_files[@]}" --env-file "$DEPLOY_ENV_FILE" exec -T website node scripts/upload-site-resources.mjs
+}
+
 app_compose_files() {
   printf '%s\n' -f docker-compose.full.yaml
   if [[ "$USE_LOCAL_RUSTFS_NETWORK" == "true" ]]; then
@@ -233,12 +244,14 @@ main() {
     deploy)
       deploy_rustfs
       deploy_app
+      upload_site_resources
       ;;
     rustfs)
       deploy_rustfs
       ;;
     app)
       deploy_app
+      upload_site_resources
       ;;
     status)
       show_status

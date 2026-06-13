@@ -1,25 +1,13 @@
-import AuthNav from "@/components/AuthNav";
-import VerticalNavBar from "@/components/VerticalNavBartest";
+import PaperArticle from "@/components/PaperArticle";
 import { requireAllowed } from "@/components/requireAllowed";
-import CvPdfClient from "@/components/CvPdfClient";
-import { mediaUrl } from "@/src/lib/media-url";
+import { papers } from "@/src/lib/papers";
 
+export const metadata = {
+  title: papers.cv.title,
+};
 
-export default async function Home() {
+export default async function CvPage() {
   await requireAllowed();
 
-  return (
-    <div className="app-shell">
-      <VerticalNavBar />
-
-      <main className="app-main">
-
-        <div className="app-content">
-          <div className="pdf-wrap">
-            <CvPdfClient url={mediaUrl("pdfs/cv.pdf")} />
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+  return <PaperArticle paper={papers.cv} />;
 }

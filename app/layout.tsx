@@ -1,19 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Source_Sans_3, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers/SessionProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import VerticalNavBar from "@/components/VerticalNavBartest";
 import "react-pdf/dist/Page/TextLayer.css";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sourceSans = Source_Sans_3({
+  variable: "--font-source-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const sourceSerif = Source_Serif_4({
+  variable: "--font-source-serif",
   subsets: ["latin"],
 });
 
@@ -32,9 +33,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${sourceSans.variable} ${sourceSerif.variable} antialiased`}>
         <Providers>
           <div className="app-shell">
+            <VerticalNavBar />
             <Header />
             <main className="app-main">{children}</main>
             <Footer />
