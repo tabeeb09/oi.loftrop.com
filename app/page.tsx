@@ -4,7 +4,7 @@ import { resourceUrl } from "@/src/lib/resource-schema";
 const bestGrades = [
   { module: "Scientific Presentation", grade: "100%" },
   { module: "Climate Change Advanced Data Analysis", grade: "90%", href: "/climate_data_analysis" },
-  { module: "Programmatic Astrophysics Modelling", grade: "84%" },
+  { module: "Reflectance in Dielectric Structures", grade: "75%", href: "/reflectance" },
   { module: "Scientific Computing", grade: "75%" },
   { module: "Mathematical Modelling", grade: "70%" },
 ];
@@ -30,6 +30,13 @@ const leadStories = [
     title: papers.hhg.title,
     summary:
       "Experimental physics and data analysis notes from the ORBYTS programme, with the source report embedded.",
+  },
+  {
+    href: "/reflectance",
+    label: "Computational physics",
+    title: papers.reflectance.title,
+    summary:
+      "Transfer-matrix modelling of dielectric coatings, from anti-reflection layers to multilayer dielectric mirrors.",
   },
   {
     href: "/climate_data_analysis",
@@ -87,9 +94,7 @@ export default function Home() {
         <div>
           <p className="eyebrow">Education</p>
           <h2>University of Bath</h2>
-          <p>
-            Graduating in June 2026 with a predicted First in Mathematics with Physics.
-          </p>
+          <p>Graduated in 2026 in Mathematics with Physics, with portfolio work spanning software, data science, and computational physics.</p>
         </div>
         <table>
           <thead>

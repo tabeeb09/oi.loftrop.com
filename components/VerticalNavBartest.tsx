@@ -16,11 +16,11 @@ type NavItem = {
 const portfolioItems: NavItem[] = [
   { href: "/", label: "Home", kicker: "Index" },
   { href: "/hhg", label: "High-harmonic generation", kicker: "Research" },
+  { href: "/reflectance", label: "Reflectance coatings", kicker: "Computational optics" },
   { href: "/climate_data_analysis", label: "Climate data science", kicker: "Analysis" },
   { href: "/neuromorphic", label: "Memristors and SNNs", kicker: "Report" },
   { href: "/cv", label: "Curriculum vitae", kicker: "Profile" },
   { href: "/docs", label: "Docs", kicker: "Notes" },
-  { href: "/schema/resources", label: "Resource schema", kicker: "Media map" },
   { href: "https://github.com/tabeeb09/oi.loftrop.com", label: "Source repository", kicker: "GitHub" },
 ];
 

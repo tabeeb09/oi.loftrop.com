@@ -1,3 +1,4 @@
+import { loadNeuromorphicJatsFigures } from "@/src/lib/jats";
 import type { ResourceId } from "@/src/lib/resource-schema";
 
 export type PaperFigure = {
@@ -29,12 +30,15 @@ export type PaperDocument = {
   authors: string[];
   affiliations?: string[];
   date?: string;
+  preamble?: string[];
   abstract: string[];
   keywords: string[];
   sections: PaperSection[];
   figures?: PaperFigure[];
   resources?: PaperResource[];
   pdfResourceId?: ResourceId;
+  heroResourceId?: ResourceId;
+  heroAlt?: string;
 };
 
 export const papers: Record<string, PaperDocument> = {
@@ -46,6 +50,8 @@ export const papers: Record<string, PaperDocument> = {
     authors: ["Tabeeb Rahman"],
     affiliations: ["UCL / University of Zurich ORBYTS Programme"],
     date: "Research placement",
+    heroResourceId: "image.hhgNanostructures",
+    heroAlt: "Nanostructures used as a high-harmonic generation project hero image",
     abstract: [
       "This project analysed high-energy XUV laboratory data to study plasmonic ionisation and electron recombination in ultra-high energy regimes.",
       "The work combined scientific Python tooling, statistical data extraction, and physics interpretation across large experimental datasets.",
@@ -93,6 +99,11 @@ export const papers: Record<string, PaperDocument> = {
     subtitle: "Advanced climate data analysis report",
     authors: ["Tabeeb Rahman"],
     date: "University of Bath coursework",
+    preamble: [
+      "Of the many triumphs of human understanding, the ability to extract meaning from noisy real-world data is one of the most practically powerful. Climate data is a particularly good example of this, because the underlying question is simple and important, but the evidence has to be handled with statistical care. During my undergraduate degree, I had the privilege of working on an extensive data analysis assignment using the Met Office UK Climate Series, applying statistical and data science methods to investigate whether the dataset provides significant evidence for climate change.",
+      "This project gave me a valuable opportunity to demonstrate my ability to turn raw historical data into a coherent quantitative argument. I analysed long-term temperature, precipitation, seasonal, and frost-day records using techniques such as baseline anomaly construction, ordinary least squares regression, hypothesis testing, distributional analysis, correlation analysis, and statistical visualisation. The assignment was also a useful exercise in communicating uncertainty: not just identifying trends, but testing whether they were statistically meaningful and interpreting the limitations of the results.",
+      "I was pleased to receive 90% for this work, which made it one of the clearest demonstrations of my data science and statistical reasoning skills during my degree. The following report presents the finished analysis, showing how the UK climate record provides strong quantitative evidence for accelerated warming, changing temperature distributions, increased warm extremes, reduced frost days, and shifts in precipitation behaviour.",
+    ],
     abstract: [
       "This report investigates climate data using statistical modelling and reproducible scientific computing methods.",
       "The portfolio presentation focuses on the analysis structure, methods, and generated report artifact.",
@@ -123,6 +134,8 @@ export const papers: Record<string, PaperDocument> = {
     title: "Memristors and spiking neural networks",
     subtitle: "Neuromorphic computing report",
     authors: ["Tabeeb Rahman"],
+    heroResourceId: "image.memristorHero",
+    heroAlt: "Memristor concept art used for the neuromorphic report hero image",
     abstract: [
       "This report surveys memristive devices and spiking neural network architectures as candidate substrates for neuromorphic computation.",
       "The page presents the report in a journal-style structure while keeping the original PDF available as the canonical artifact.",
@@ -145,8 +158,63 @@ export const papers: Record<string, PaperDocument> = {
         ],
       },
     ],
-    resources: [{ label: "Embedded report", resourceId: "pdf.neuromorphic" }],
+    resources: [
+      { label: "Embedded report", resourceId: "pdf.neuromorphic" },
+      { label: "JATS export package", resourceId: "xml.neuromorphicJats" },
+    ],
+    figures: loadNeuromorphicJatsFigures().map((figure, index) => ({
+      id: `jats-${index + 1}`,
+      label: figure.label,
+      caption: figure.caption,
+      href: figure.href,
+    })),
     pdfResourceId: "pdf.neuromorphic",
+  },
+  reflectance: {
+    slug: "reflectance",
+    label: "Computational physics report",
+    title: "Reflectance in dielectric structures",
+    subtitle: "Transfer-matrix modelling of thin-film optical coatings",
+    authors: ["Tabeeb Rahman"],
+    date: "University of Bath coursework",
+    preamble: [
+      "Of the many triumphs of human understanding, the ability to predict how light behaves inside structured materials remains one of the most elegant links between physics, mathematics, and computation. Thin-film dielectric coatings are a particularly good example of this, because their behaviour follows from the interference of reflected waves at each interface, yet the final optical response can become highly non-trivial once multiple layers are combined.",
+      "During my undergraduate degree, I had the privilege of working on a computational physics project exploring reflectance in dielectric structures. This gave me the opportunity to demonstrate my ability to translate physical theory into working numerical code, using the transfer-matrix formalism to model normally incident light in single-layer, bilayer, and multilayer dielectric coatings. I implemented the calculations in C, using complex arithmetic to evaluate the reflectivity and generate reflectance spectra across the visible range.",
+      "The project was a useful exercise in connecting abstract electromagnetic theory to concrete computational results. A single low-index layer behaved mainly as an anti-reflection coating, while adding high-index layers introduced stronger interference effects. Repeating the bilayer structure produced the characteristic behaviour of a dielectric mirror, with reflectance approaching unity across a broad stop band as the number of bilayers increased. I was pleased to receive 75% for this work, which made it a strong demonstration of my computational physics, numerical modelling, and scientific programming skills.",
+      "The following report presents the finished analysis, showing how the transfer-matrix method can be used to predict and interpret the reflectance behaviour of dielectric coatings from simple single-layer structures through to high-reflectance multilayer mirrors.",
+    ],
+    abstract: [
+      "This report models single-layer, bilayer, and multilayer dielectric coatings using transfer matrices and complex amplitudes.",
+      "It records the implementation and physical interpretation of reflectance spectra across increasingly structured optical stacks.",
+    ],
+    keywords: ["Optics", "Dielectric coatings", "Transfer matrix", "Computational physics", "C"],
+    sections: [
+      {
+        id: "motivation",
+        title: "Motivation",
+        paragraphs: [
+          "Thin-film optical coatings provide a compact example of how interference, boundary conditions, and numerical modelling combine into a practical engineering problem.",
+          "The project focused on reproducing reflectance behaviour across simple anti-reflection layers and repeated bilayer mirrors.",
+        ],
+      },
+      {
+        id: "method",
+        title: "Method",
+        paragraphs: [
+          "The core model used the transfer-matrix formalism for normally incident light, implemented in C with complex arithmetic.",
+          "Reflectance spectra were generated across the visible range and compared across single-layer, bilayer, and repeated multilayer structures.",
+        ],
+      },
+      {
+        id: "outcome",
+        title: "Outcome",
+        paragraphs: [
+          "The report demonstrates a clear progression from weak anti-reflection behaviour to broad high-reflectance stop bands as more bilayers are added.",
+        ],
+      },
+    ],
+    resources: [{ label: "Embedded report", resourceId: "pdf.reflectance" }],
+    pdfResourceId: "pdf.reflectance",
   },
   cv: {
     slug: "cv",

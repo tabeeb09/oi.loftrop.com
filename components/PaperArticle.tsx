@@ -16,6 +16,7 @@ function renderSection(section: PaperSection) {
 
 export default function PaperArticle({ paper }: { paper: PaperDocument }) {
   const pdfUrl = paper.pdfResourceId ? resourceUrl(paper.pdfResourceId) : null;
+  const heroUrl = paper.heroResourceId ? resourceUrl(paper.heroResourceId) : null;
 
   return (
     <article className="paper-article editorial-page">
@@ -41,7 +42,20 @@ export default function PaperArticle({ paper }: { paper: PaperDocument }) {
             </div>
           ) : null}
         </dl>
+        {heroUrl ? (
+          <figure className="paper-hero">
+            <img src={heroUrl} alt={paper.heroAlt ?? paper.title} />
+          </figure>
+        ) : null}
       </header>
+
+      {paper.preamble?.length ? (
+        <section className="paper-preamble">
+          {paper.preamble.map((paragraph) => (
+            <p key={paragraph}>{paragraph}</p>
+          ))}
+        </section>
+      ) : null}
 
       <section className="paper-abstract" aria-labelledby={`${paper.slug}-abstract`}>
         <h2 id={`${paper.slug}-abstract`}>Abstract</h2>

@@ -63,11 +63,25 @@
     "localPath": "public/images/team-bath-uav.jpg"
   },
   {
+    "id": "image.memristorHero",
+    "kind": "image",
+    "title": "Memristor hero image",
+    "key": "images/research/memristor-hero.png",
+    "localPath": "public/images/research/memristor-hero.png"
+  },
+  {
+    "id": "image.hhgNanostructures",
+    "kind": "image",
+    "title": "Nanostructures hero image",
+    "key": "images/research/hhg-nanostructures.jfif",
+    "localPath": "public/images/research/hhg-nanostructures.jfif"
+  },
+  {
     "id": "pdf.hhg",
     "kind": "pdf",
-    "title": "High Harmonic Generation with Plasmonic Enhancements",
-    "key": "pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf",
-    "localPath": "public/pdfs/High-Harmonic-Generation-with-Plasmonic-Enhancements.pdf"
+    "title": "High harmonic generation plasmonic report",
+    "key": "pdfs/high-harmonic-generation-plasmonic-report.pdf",
+    "localPath": "public/pdfs/high-harmonic-generation-plasmonic-report.pdf"
   },
   {
     "id": "pdf.climate",
@@ -91,11 +105,32 @@
     "localPath": "public/pdfs/RahmanTabeebReport.pdf"
   },
   {
+    "id": "pdf.reflectance",
+    "kind": "pdf",
+    "title": "Reflectance in dielectric structures",
+    "key": "pdfs/reflectance-in-dielectric-structures-self-contained.pdf",
+    "localPath": "public/pdfs/reflectance-in-dielectric-structures-self-contained.pdf"
+  },
+  {
     "id": "presentation.hhg",
     "kind": "presentation",
     "title": "High Harmonic Generation presentation",
     "key": "presentations/High-Harmonic-Generation-with-Plasmonic-Enhancements.pptx",
     "localPath": "public/Presentations/High Harmonic Generation with Plasmonic Enhancements.pptx"
+  },
+  {
+    "id": "bundle.neuromorphicJatsMedia",
+    "kind": "bundle",
+    "title": "Neuromorphic JATS media bundle",
+    "keyPrefix": "papers/neuromorphic/jats/media",
+    "localPath": "content/jats/neuromorphic/media"
+  },
+  {
+    "id": "xml.neuromorphicJats",
+    "kind": "xml",
+    "title": "Neuromorphic JATS article package",
+    "key": "papers/neuromorphic/jats/article.xml",
+    "localPath": "content/jats/neuromorphic/article.xml"
   },
   {
     "id": "static.vercel",

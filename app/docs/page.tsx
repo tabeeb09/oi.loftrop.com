@@ -19,7 +19,7 @@ export default function DocsPage() {
           <a href="https://github.com/tabeeb09/oi.loftrop.com">website repository</a>.
         </p>
         <p>
-          The live media registry is documented at <a href="/schema/resources">Resource schema</a>.
+          Media assets are resolved through an internal resource manifest so storage backends can be changed without rewriting page content.
         </p>
       </section>
     </article>

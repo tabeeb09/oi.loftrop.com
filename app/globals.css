@@ -332,6 +332,32 @@ textarea {
   border-bottom: 3px double var(--rule-strong);
 }
 
+.paper-hero,
+.paper-preamble {
+  margin-top: 1.5rem;
+}
+
+.paper-hero {
+  border: 1px solid var(--rule);
+  background: var(--sheet);
+  padding: 0.6rem;
+}
+
+.paper-hero img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.paper-preamble {
+  border-left: 4px solid var(--accent);
+  padding: 0 0 0 1rem;
+  color: #333c45;
+  font-family: var(--font-editorial);
+  font-size: 1.08rem;
+  line-height: 1.7;
+}
+
 .paper-header h1 {
   max-width: 16ch;
   font-size: clamp(2.8rem, 7vw, 6.5rem);

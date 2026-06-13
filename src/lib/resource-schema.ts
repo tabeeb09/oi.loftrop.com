@@ -3,13 +3,14 @@ import resourceSchemaData from "@/src/lib/resource-schema-data.json";
 const defaultMediaBaseUrl = "https://media.loftrop.com";
 const defaultBucket = "public-media";
 
-export type ResourceKind = "image" | "icon" | "pdf" | "presentation" | "static";
+export type ResourceKind = "image" | "icon" | "pdf" | "presentation" | "static" | "bundle" | "xml";
 
 export type SiteResource = {
   id: string;
   kind: ResourceKind;
   title: string;
-  key: string;
+  key?: string;
+  keyPrefix?: string;
   localPath?: string;
   description?: string;
 };
@@ -26,11 +27,15 @@ export type ResourceId =
   | "icon.next"
   | "image.profile"
   | "image.teamBathUav"
+  | "image.memristorHero"
+  | "image.hhgNanostructures"
   | "pdf.hhg"
   | "pdf.climate"
   | "pdf.cv"
   | "pdf.neuromorphic"
+  | "pdf.reflectance"
   | "presentation.hhg"
+  | "xml.neuromorphicJats"
   | "static.vercel"
   | "static.window";
 
@@ -54,6 +59,10 @@ export function mediaBucket() {
 
 export function resourceUrl(id: ResourceId) {
   const resource = resourceById(id);
+  if (!resource.key) {
+    throw new Error(`Resource ${id} does not map to a single key.`);
+  }
+
   return `${mediaBaseUrl()}/${mediaBucket()}/${resource.key.replace(/^\/+/, "")}`;
 }
 

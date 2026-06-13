@@ -44,7 +44,9 @@ const contentTypes = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
   [".png", "image/png"],
+  [".jfif", "image/jpeg"],
   [".pdf", "application/pdf"],
+  [".xml", "application/xml"],
   [".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
 ]);
 
@@ -77,6 +79,32 @@ for (const resource of siteResources) {
 
   if (!localPath || !fs.existsSync(localPath)) {
     console.warn(`Skipping missing resource ${resource.id}: ${localPath || "no localPath"}`);
+    continue;
+  }
+
+  if (fs.statSync(localPath).isDirectory()) {
+    if (!resource.keyPrefix) {
+      console.warn(`Skipping directory resource without keyPrefix ${resource.id}: ${localPath}`);
+      continue;
+    }
+
+    const files = fs.readdirSync(localPath, { withFileTypes: true }).filter((item) => item.isFile());
+    for (const file of files) {
+      const filePath = path.join(localPath, file.name);
+      const extension = path.extname(filePath).toLowerCase();
+      const key = `${resource.keyPrefix.replace(/\/+$/, "")}/${file.name}`;
+      await client.send(
+        new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET,
+          Key: key,
+          Body: fs.createReadStream(filePath),
+          ContentType: contentTypes.get(extension) || "application/octet-stream",
+        }),
+      );
+      uploaded += 1;
+      console.log(`Uploaded ${resource.id}/${file.name} -> ${process.env.S3_BUCKET}/${key}`);
+    }
+
     continue;
   }
 
