@@ -14,9 +14,6 @@
 /coverage
 /.act-local/
 
-# cv
-/public/pdfs/cv.pdf
-
 # NavBar iterations
 /components/VerticalNavBar.tsx
 /components/VerticalNavBar (1).tsx
