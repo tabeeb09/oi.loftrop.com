@@ -15,17 +15,17 @@ type NavItem = {
 
 const portfolioItems: NavItem[] = [
   { href: "/", label: "Home", kicker: "Index" },
+  { href: "/neuromorphic", label: "Memristors and SNNs", kicker: "Report" },
   { href: "/hhg", label: "High-harmonic generation", kicker: "Research" },
   { href: "/reflectance", label: "Reflectance coatings", kicker: "Computational optics" },
   { href: "/climate_data_analysis", label: "Climate data science", kicker: "Analysis" },
-  { href: "/neuromorphic", label: "Memristors and SNNs", kicker: "Report" },
   { href: "/cv", label: "Curriculum vitae", kicker: "Profile" },
   { href: "/docs", label: "Docs", kicker: "Notes" },
   { href: "https://github.com/tabeeb09/oi.loftrop.com", label: "Source repository", kicker: "GitHub" },
 ];
 
 const accountItems: NavItem[] = [
-  { href: "/cms/media", label: "Media CMS", kicker: "RustFS", roles: ["owner", "media_admin"] },
+  { href: "/cms/media", label: "Media CMS", kicker: "RustFS" },
   { href: "/admin/role-requests", label: "Role requests", kicker: "Identity", roles: ["owner"] },
   {
     href: "/admin/config-requests",

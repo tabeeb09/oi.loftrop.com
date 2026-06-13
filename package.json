@@ -13,6 +13,7 @@
     "prepare:fullstack:local": "node scripts/prepare-full-stack-env.mjs --mode local --base .env.full.local --runtime .env.runtime --output .env.full.local.generated",
     "up:fullstack:local": "node scripts/full-stack-local-up.mjs",
     "prepare:fullstack:prod": "node scripts/prepare-full-stack-env.mjs --mode prod --base .env.example --runtime .env.runtime --output .env.full.generated",
+    "init:rustfs": "node scripts/init-rustfs-bucket.mjs",
     "upload:resources": "node scripts/upload-site-resources.mjs"
   },
   "dependencies": {

@@ -212,6 +212,47 @@ textarea {
   justify-content: flex-end;
 }
 
+.lead-card--image,
+.story-card--image {
+  position: relative;
+  overflow: hidden;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.lead-card--image::before,
+.story-card--image::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 12, 16, 0.08) 0%, rgba(10, 12, 16, 0.72) 100%);
+}
+
+.lead-card--image > *,
+.story-card--image > * {
+  position: relative;
+  z-index: 1;
+}
+
+.lead-card--light,
+.story-card--light {
+  color: #f8f4ea;
+}
+
+.lead-card--light .eyebrow,
+.story-card--light .eyebrow {
+  color: #f3c48f;
+}
+
+.lead-card--light h2 a,
+.story-card--light h2 a,
+.lead-card--light p:not(.eyebrow),
+.story-card--light p,
+.lead-card--light .read-link {
+  color: #f8f4ea;
+}
+
 .lead-card h2,
 .story-card h2,
 .home-band h2,
@@ -332,21 +373,8 @@ textarea {
   border-bottom: 3px double var(--rule-strong);
 }
 
-.paper-hero,
 .paper-preamble {
   margin-top: 1.5rem;
-}
-
-.paper-hero {
-  border: 1px solid var(--rule);
-  background: var(--sheet);
-  padding: 0.6rem;
-}
-
-.paper-hero img {
-  display: block;
-  width: 100%;
-  height: auto;
 }
 
 .paper-preamble {

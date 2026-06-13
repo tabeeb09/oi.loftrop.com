@@ -1,6 +1,88 @@
 ## Getting Started
 
-First, clone the repo and install dependencies.
+This repository is the website-side of the stack. It contains the public Next.js portfolio application, the authenticated CMS at `/cms/media`, the RustFS-facing media registry, and the VPS/bootstrap scripts used to deploy the website and media services together.
+
+I am running this on a VPS, so allowing it to be accessible via the internet. You can access my portfolio site by navigating to https://oi.loftrop.com which is portfolio spelled in reverse order. Every time I push a commit to the main branch, the VPS is configured with GitHub Actions and the new version of the site goes live. If any content is needed for the site that is too large for GitHub, I use separate object storage for those files, so those files will not necessarily be provided directly in this repo. Note that sensitive things such as API keys and my personal details such as my CV are not included in plaintext configuration.
+
+The application is designed around a few explicit boundaries:
+
+- the public website is served by Next.js
+- media is stored in an S3-compatible bucket and referenced through an internal resource registry
+- Keycloak is the role authority
+- OpenBao is the runtime secret source of truth
+- RustFS serves public media and the protected storage/admin surface
+
+## Infrastructure model
+
+The implementation stays MVP-oriented: simple forms, simple tables, server-side auth checks, and a small number of scripts. The website expects a separate central auth/policy deployment to provide Keycloak and OpenBao, while this repo owns the public site, RustFS media path, and the app VPS orchestration.
+
+The current deployment model is:
+
+```mermaid
+graph LR
+  subgraph "External"
+    user["User (browser)"]
+    gh["GitHub Actions"]
+    cf["Cloudflare DNS"]
+  end
+  subgraph "Cloud Infrastructure"
+    caddy["Caddy Proxy<br/>(TLS on 443)"]
+    next["Next.js app (Docker)"]
+    oauth2["OAuth2 Proxy (admin)"]
+    keycloak["Keycloak (OIDC server)"]
+    pg["PostgreSQL (Keycloak DB)"]
+    openbao["OpenBao (Secret store)"]
+    rustfs["RustFS (S3 media storage)"]
+  end
+  subgraph "CI/CD & Provisioning"
+    ghcr["GH Container Registry"]
+    runner["Self-hosted Runner"]
+    compose["Docker Compose"]
+    terraform["Terraform<br/>(Hetzner + cloud-init)"]
+    vps["Hetzner VPS"]
+  end
+  user -->|DNS lookup| cf
+  cf -->|resolves to| caddy
+  user -->|HTTPS| caddy
+  caddy --> next
+  caddy --> oauth2
+  oauth2 --> openbao
+  oauth2 --> keycloak
+  keycloak --> pg
+  next --> rustfs
+  gh --> ghcr
+  gh --> runner
+  runner --> ghcr
+  runner --> compose
+  compose --> next
+  compose --> keycloak
+  compose --> openbao
+  compose --> rustfs
+  compose --> oauth2
+  vps --> caddy
+  terraform --> vps
+  vps --> runner
+  vps --> compose
+```
+
+Operationally, the public website, RustFS media stack, and deployment scripts live here. Keycloak and OpenBao are consumed as upstream infrastructure from the CAId repo.
+
+## Media and auth flow
+
+The media and auth model is intentionally split so that the browser never gets direct write credentials:
+
+1. Editors sign in through Auth.js / NextAuth.
+2. The app resolves roles from Keycloak, not from whatever external social provider the user originally used.
+3. `/cms/media` calls server routes under `/api/cms/media/*`.
+4. Listing and delete operations use the AWS SDK directly against RustFS.
+5. Uploads use short-lived presigned PUT URLs so large files do not proxy through Next.js.
+6. Public media stays directly readable from the media host and bucket path.
+
+The internal resource registry at `src/lib/resource-schema-data.json` is deliberately not a public page. It is a translation layer that maps logical site resources to object keys so the storage backend can be replaced later without rewriting page code.
+
+## Clone and install
+
+Clone the repo and install dependencies:
 
 ```bash
 git clone https://github.com/tabeeb09/oi.loftrop.com.git
@@ -8,46 +90,46 @@ cd oi.loftrop.com
 npm install
 ```
 
-To run only the Next.js app in local development:
+For simple UI-only local development:
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-I am running this on a VPS, so allowing it to be accessible via the internet. You can access my portfolio site by nativating to https://oi.loftrop.com which is portfolio spelled in reverse order.
-Every Time I push commit to the main branch, the VPS is confgiured with Github Actions and the new version of the site goes live. If any content is needed for the site that is too large for GitHub,
-I use google cloud content servers, so those files will not be provided in this repo. Note that sensitive things such as api keys and my Personal details such as my CV are not included.
+Open `http://localhost:3000`.
 
 ## Environment and secrets
 
-For a full local or VPS-style run, create the base env file and then let the bootstrap script fetch runtime secrets from OpenBao.
+This repo supports both a plain local Next.js run and a fuller Docker/OpenBao/RustFS flow.
+
+Copy the base env file first:
 
 ```bash
 cp .env.example .env
-# fill in hostnames, URLs, and any local overrides you need
 ```
 
-If you are testing the full same-host stack locally, the generated runtime file is assembled with:
+or on PowerShell:
 
-```bash
-npm run prepare:fullstack:local
+```powershell
+Copy-Item .env.example .env
 ```
 
-If you are testing production-style env assembly from fetched secrets:
+Fill in the values you actually own, such as:
 
-```bash
-npm run prepare:fullstack:prod
-```
+- domain names / public URLs
+- OAuth provider credentials
+- OpenBao AppRole bootstrap credentials
+- Keycloak client secrets
+- S3 credentials
+- DNS or VPS provider API tokens, if you are using the infrastructure scripts
 
-The OpenBao bootstrap fetch is:
+For runtime secret fetching, the main script is:
 
 ```bash
 npm run fetch:openbao-secrets
 ```
 
-You must provide your own values for domain names, OAuth provider credentials, OpenBao AppRole credentials, Keycloak client secrets, S3 credentials, and any DNS/provider API tokens used by the infrastructure scripts.
+That script reads the configured OpenBao paths and writes the merged runtime material used by the Docker flows.
 
 ## Running the stack locally
 
@@ -64,23 +146,63 @@ npm run prepare:fullstack:local
 npm run up:fullstack:local
 ```
 
-If you prefer Docker Compose directly for the website and RustFS:
+That flow:
+
+- fetches runtime secrets from OpenBao
+- generates `.env.full.local.generated`
+- starts the local Docker services
+- creates the RustFS bucket if missing
+- applies bucket CORS/public-read policy
+- uploads the registered site resources into RustFS
+
+If you need to run those RustFS preparation steps manually:
+
+```bash
+npm run init:rustfs
+npm run upload:resources
+```
+
+If you want direct Docker Compose control instead:
 
 ```bash
 docker compose -f docker-compose.rustfs.yaml up -d
-docker compose -f docker-compose.full.yaml -f docker-compose.same-host-rustfs.yaml up -d
+docker compose -f docker-compose.app.local.yaml --env-file .env.full.local.generated up -d --build
 ```
 
 To stop them:
 
 ```bash
-docker compose -f docker-compose.full.yaml -f docker-compose.same-host-rustfs.yaml down
+docker compose -f docker-compose.app.local.yaml --env-file .env.full.local.generated down
 docker compose -f docker-compose.rustfs.yaml down
 ```
 
-## VPS stack scripts
+To inspect logs:
 
-Use the master script for normal VPS operations:
+```bash
+docker compose -f docker-compose.app.local.yaml --env-file .env.full.local.generated logs -f
+docker compose -f docker-compose.rustfs.yaml logs -f
+```
+
+## VPS deployment
+
+This repo assumes:
+
+- OpenBao runs on a separate central auth/policy VPS
+- Keycloak runs on that same central auth/policy VPS
+- this app VPS fetches runtime secrets from OpenBao using AppRole
+- the website image is built by GitHub Actions and pulled from GHCR
+
+The simplest VPS flow is:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git
+git clone https://github.com/tabeeb09/oi.loftrop.com.git /srv/website/app
+cd /srv/website/app
+sudo bash scripts/setup-app-vps.sh
+```
+
+The master operational wrapper is:
 
 ```bash
 sudo bash scripts/website-stack-vps.sh setup
@@ -88,13 +210,13 @@ sudo bash scripts/website-stack-vps.sh deploy
 sudo bash scripts/website-stack-vps.sh status
 ```
 
-`setup` provisions host dependencies, checks out or updates the repo, prepares base configuration, bootstraps runtime secrets, deploys RustFS, and then deploys the website.
+What those do:
 
-`deploy` redeploys the RustFS and website stacks and uploads registered site resources to S3.
+- `setup`: provisions host dependencies, checks out or updates the repo, prepares base configuration, fetches runtime secrets, deploys RustFS, then deploys the website
+- `deploy`: redeploys the RustFS and website stacks and uploads registered resources
+- `status`: prints container state
 
-`status` shows the current app and RustFS container state.
-
-The lower-level scripts remain available for targeted operations:
+The lower-level scripts remain available if you need to target one part of the flow:
 
 ```bash
 sudo bash scripts/bootstrap-app-vps.sh
@@ -102,55 +224,64 @@ sudo bash scripts/deploy-rustfs-vps.sh
 sudo bash scripts/deploy-app-vps.sh
 ```
 
-Hierarchy:
+`bootstrap-app-vps.sh` is the step that prompts for or reads:
 
-- `website-stack-vps.sh` orchestrates the full website VPS flow.
-- `bootstrap-app-vps.sh` fetches OpenBao secrets and writes deploy env files.
-- `deploy-rustfs-vps.sh` starts RustFS, OAuth2 Proxy, and the media Caddy.
-- `deploy-app-vps.sh` starts the Next.js website and website Caddy.
+- `BAO_ADDR`
+- `OPENBAO_ROLE_ID`
+- `OPENBAO_SECRET_ID`
 
-Useful operational commands:
+It then fetches secrets from OpenBao, writes the deploy env files under `/etc/website`, and prepares the stack for Compose deployment.
 
-```bash
-sudo bash scripts/website-stack-vps.sh logs
-sudo bash scripts/website-stack-vps.sh down
-sudo docker compose -f docker-compose.full.yaml -f docker-compose.same-host-rustfs.yaml logs -f
-sudo docker compose -f docker-compose.rustfs.yaml logs -f
+## Hetzner bootstrap
+
+If you are using the Hetzner bootstrap path, first create a config file from the example:
+
+```powershell
+Copy-Item .\infra\hetzner-single\bootstrap.config.example.json .\my-bootstrap.config.json
+```
+
+Then fill in your own values and run:
+
+```powershell
+.\scripts\bootstrap-hetzner-project.ps1 --config .\my-bootstrap.config.json
+```
+
+This path expects your own:
+
+- Hetzner API token
+- Cloudflare API token, if DNS automation is enabled
+- GitHub token for runner/repo configuration
+- domain names
+- external OAuth credentials
+
+If the Google OAuth values come from a downloaded Google client JSON, use the dedicated script option rather than hand-copying:
+
+```powershell
+# TODO: replace with your actual local path
+.\scripts\bootstrap-hetzner-project.ps1 --config .\my-bootstrap.config.json -GoogleClientSecretsFile C:\path\to\client_secret.json
 ```
 
 ## Admin access
 
-After startup, the public website is served from your configured site URL.
+After startup, the main endpoints are:
 
-The CMS is served from:
+- website: `https://<APP_HOST>`
+- CMS: `https://<APP_HOST>/cms/media`
+- media endpoint: `https://<MEDIA_HOST>`
+- RustFS admin surface: `https://<RUSTFS_ADMIN_HOST>`
+- OAuth2 Proxy callback/auth host: `https://<OAUTH2_PROXY_HOST>`
 
-```text
-https://<APP_HOST>/cms/media
-```
+The website repo does not bootstrap Keycloak or OpenBao itself. Those are expected to come from the separate CAId deployment.
 
-The RustFS admin surface is normally fronted through the RustFS admin host:
+## Resource registry and media updates
 
-```text
-https://<RUSTFS_ADMIN_HOST>
-```
-
-The OAuth2 Proxy callback host is configured through:
-
-```text
-https://<OAUTH2_PROXY_HOST>
-```
-
-The site expects Keycloak and OpenBao to be bootstrapped already. In the intended flow, those services are provisioned from the CAId repo, not manually inside this repo.
-
-## Resource registry
-
-Static portfolio assets are registered in the internal translation layer at:
+Static assets and paper files are registered in:
 
 ```text
 src/lib/resource-schema-data.json
 ```
 
-That file is intentionally internal. It maps stable resource identifiers to object keys so the storage backend can be changed later without rewriting page-level references.
+That file is the internal translation layer for future storage migrations. It is where logical resource IDs map to object keys and local source paths.
 
 To upload all registered assets and paper bundles into RustFS/S3:
 
@@ -158,27 +289,15 @@ To upload all registered assets and paper bundles into RustFS/S3:
 npm run upload:resources
 ```
 
-To add a new asset or report, add it to the repo, register it in `src/lib/resource-schema-data.json`, and then re-run the upload command or a normal VPS deploy.
+If you add a new asset or report:
 
-## Hetzner bootstrap
-
-If you are using the single-VPS Hetzner bootstrap path:
-
-```powershell
-.\scripts\bootstrap-hetzner-project.ps1 --config .\my-bootstrap.config.json
-```
-
-If the config file does not exist yet, create it first from the example and fill in your values:
-
-```powershell
-Copy-Item .\infra\hetzner-single\bootstrap.config.example.json .\my-bootstrap.config.json
-```
-
-The bootstrap path expects your own Hetzner API token, Cloudflare API token when DNS automation is enabled, GitHub token for runner/repo configuration, domain names, and external OAuth credentials.
+1. place it in the repo
+2. register it in `src/lib/resource-schema-data.json`
+3. rerun `npm run upload:resources` or a normal VPS deploy
 
 ## GitHub Actions deployment
 
-The deployment flow is:
+The deployment workflow is:
 
 ```mermaid
 graph LR
@@ -208,20 +327,9 @@ graph LR
   Stack --> Browser
 ```
 
-The deployment flow is:
+In practice, automatic deploys from the website workflow restart only the website app stack. They do not need to restart RustFS unless you explicitly request a broader deploy scope.
 
-```text
-push to main
--> Build and Push Website
--> ghcr.io/tabeeb09/website:latest
--> App Deploy To VPS
--> scripts/website-stack-vps.sh bootstrap
--> scripts/website-stack-vps.sh app
-```
-
-Automatic deploys from `Build and Push Website` restart only the website app stack. They do not restart RustFS. Manual `workflow_dispatch` supports `deploy_scope=app`, `deploy_scope=full`, `deploy_scope=rustfs`, or `deploy_scope=status`.
-
-Required repository secrets:
+Required repository secrets are:
 
 ```text
 DEPLOY_HOST
@@ -239,7 +347,7 @@ APP_EXTRA_COMPOSE_FILES=
 RUSTFS_EXTRA_COMPOSE_FILES=
 ```
 
-Generate the deploy SSH key and known-hosts value from a local machine:
+To prepare the SSH deploy material from a local machine:
 
 ```powershell
 .\scripts\prepare-github-actions-vps-deploy.ps1 -HostName your-vps-hostname -UserName deploy -InstallPublicKey
@@ -251,11 +359,9 @@ For a non-standard SSH port:
 .\scripts\prepare-github-actions-vps-deploy.ps1 -HostName your-vps-hostname -UserName deploy -Port 2222 -InstallPublicKey
 ```
 
-For the current same-VM dev setup, the optional override variables are useful. Production should normally leave them empty unless a host needs local-only compose overrides.
+## Local checks
 
-## Checks
-
-Local checks currently supported by the repo:
+The repo currently supports:
 
 ```bash
 npm run build

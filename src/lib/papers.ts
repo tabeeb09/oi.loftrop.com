@@ -1,4 +1,3 @@
-import { loadNeuromorphicJatsFigures } from "@/src/lib/jats";
 import type { ResourceId } from "@/src/lib/resource-schema";
 
 export type PaperFigure = {
@@ -160,14 +159,7 @@ export const papers: Record<string, PaperDocument> = {
     ],
     resources: [
       { label: "Embedded report", resourceId: "pdf.neuromorphic" },
-      { label: "JATS export package", resourceId: "xml.neuromorphicJats" },
     ],
-    figures: loadNeuromorphicJatsFigures().map((figure, index) => ({
-      id: `jats-${index + 1}`,
-      label: figure.label,
-      caption: figure.caption,
-      href: figure.href,
-    })),
     pdfResourceId: "pdf.neuromorphic",
   },
   reflectance: {

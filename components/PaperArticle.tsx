@@ -16,7 +16,6 @@ function renderSection(section: PaperSection) {
 
 export default function PaperArticle({ paper }: { paper: PaperDocument }) {
   const pdfUrl = paper.pdfResourceId ? resourceUrl(paper.pdfResourceId) : null;
-  const heroUrl = paper.heroResourceId ? resourceUrl(paper.heroResourceId) : null;
 
   return (
     <article className="paper-article editorial-page">
@@ -42,11 +41,6 @@ export default function PaperArticle({ paper }: { paper: PaperDocument }) {
             </div>
           ) : null}
         </dl>
-        {heroUrl ? (
-          <figure className="paper-hero">
-            <img src={heroUrl} alt={paper.heroAlt ?? paper.title} />
-          </figure>
-        ) : null}
       </header>
 
       {paper.preamble?.length ? (

@@ -82,6 +82,14 @@ function main() {
     "-d",
     "--build",
   ]);
+
+  run("node", ["scripts/init-rustfs-bucket.mjs"], {
+    ...baseEnv,
+  });
+
+  run("node", ["scripts/upload-site-resources.mjs"], {
+    ...baseEnv,
+  });
 }
 
 main();

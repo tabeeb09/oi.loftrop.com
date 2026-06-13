@@ -55,11 +55,17 @@ function makeClient(endpoint = env.S3_ENDPOINT) {
 export async function listMediaObjects(prefix?: string) {
   const client = makeClient();
   const normalizedPrefix = cleanPrefix(prefix);
-  const response = await client.send(
+  const folderResponse = await client.send(
     new ListObjectsV2Command({
       Bucket: env.S3_BUCKET,
       Prefix: normalizedPrefix,
       Delimiter: "/",
+    }),
+  );
+  const objectResponse = await client.send(
+    new ListObjectsV2Command({
+      Bucket: env.S3_BUCKET,
+      Prefix: normalizedPrefix,
     }),
   );
 
@@ -69,11 +75,11 @@ export async function listMediaObjects(prefix?: string) {
   return {
     bucket: env.S3_BUCKET!,
     prefix: normalizedPrefix,
-    folders: (response.CommonPrefixes ?? [])
+    folders: (folderResponse.CommonPrefixes ?? [])
       .map((item) => item.Prefix)
       .filter((item): item is string => Boolean(item))
       .map((item) => ({ prefix: item })),
-    objects: (response.Contents ?? [])
+    objects: (objectResponse.Contents ?? [])
       .filter((item) => item.Key)
       .map((item) => ({
         key: item.Key!,
