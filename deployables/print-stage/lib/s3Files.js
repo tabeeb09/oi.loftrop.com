@@ -38,6 +38,18 @@ function createS3Client() {
   });
 }
 
+function createPublicS3Client() {
+  return new S3Client({
+    endpoint: env.S3_PUBLIC_ENDPOINT || env.S3_ENDPOINT,
+    region: env.S3_REGION,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: env.S3_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
 function sanitizeFilename(filename) {
   const normalized = filename
     .normalize("NFKC")
@@ -64,16 +76,6 @@ function buildManifestKey(fileId) {
 
 function buildPrintQueueObjectKey(ownerSub, fileId, filename) {
   return `${PRINT_QUEUE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
-}
-
-function toClientAccessibleUrl(url) {
-  if (!env.S3_PUBLIC_ENDPOINT) {
-    return url;
-  }
-
-  const source = new URL(url);
-  const targetBase = new URL(env.S3_PUBLIC_ENDPOINT);
-  return new URL(`${source.pathname}${source.search}`, targetBase).toString();
 }
 
 function decodeCursor(cursor) {
@@ -377,7 +379,7 @@ export async function createUploadUrl(actor, request) {
 
   await writeManifest(manifest);
 
-  const client = createS3Client();
+  const client = createPublicS3Client();
   const uploadUrl = await getSignedUrl(
     client,
     new PutObjectCommand({
@@ -390,7 +392,7 @@ export async function createUploadUrl(actor, request) {
 
   return {
     file: manifest,
-    uploadUrl: toClientAccessibleUrl(uploadUrl),
+    uploadUrl,
     uploadMethod: "PUT",
     uploadHeaders: request.mimeType ? { "Content-Type": request.mimeType } : {},
   };
@@ -434,7 +436,7 @@ export async function createDownloadUrl(actor, fileId) {
   }
 
   const hydrated = await hydrateManifest(manifest);
-  const client = createS3Client();
+  const client = createPublicS3Client();
   const downloadUrl = await getSignedUrl(
     client,
     new GetObjectCommand({
@@ -449,7 +451,7 @@ export async function createDownloadUrl(actor, fileId) {
 
   return {
     file: hydrated,
-    downloadUrl: toClientAccessibleUrl(downloadUrl),
+    downloadUrl,
     expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS,
   };
 }
