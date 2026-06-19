@@ -1,6 +1,7 @@
 "use client";
 
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
+import AuthActionButton from "./AuthActionButton";
 
 export default function Header() {
   const { data: session, status } = useSession();
@@ -14,11 +15,9 @@ export default function Header() {
         <a href="https://www.linkedin.com/in/tabeeb-rahman-88428722a/">Hire me</a>
         <a href="/docs">Docs</a>
         {status === "loading" ? null : session ? (
-          <button type="button" onClick={() => signOut()}>
-            Sign out
-          </button>
+          <AuthActionButton callbackUrl="/" />
         ) : (
-          <a href="/api/auth/signin">Sign in</a>
+          <AuthActionButton callbackUrl="/" />
         )}
       </nav>
     </header>

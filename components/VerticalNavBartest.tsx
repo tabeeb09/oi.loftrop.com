@@ -1,9 +1,10 @@
 "use client";
 
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { resourceUrl } from "@/src/lib/resource-schema";
+import AuthActionButton from "./AuthActionButton";
 import "./VerticalNavBar.css";
 
 type NavItem = {
@@ -25,6 +26,7 @@ const portfolioItems: NavItem[] = [
 ];
 
 const accountItems: NavItem[] = [
+  { href: "/files", label: "My files", kicker: "Private storage" },
   { href: "/cms/media", label: "Media CMS", kicker: "RustFS" },
   { href: "/admin/role-requests", label: "Role requests", kicker: "Identity", roles: ["owner"] },
   {
@@ -120,14 +122,16 @@ export default function VerticalNavBar() {
                       {item.kicker ? <small>{item.kicker}</small> : null}
                     </a>
                   ))}
-                <button className="nav-action" type="button" onClick={() => signOut()}>
-                  Sign out
-                </button>
+                <AuthActionButton className="nav-action" callbackUrl="/" />
               </>
             ) : (
               <>
                 <p className="nav-muted">Sign in to request roles or manage media.</p>
-                <button className="nav-action" type="button" onClick={() => signIn()}>
+                <button
+                  className="nav-action"
+                  type="button"
+                  onClick={() => signIn("keycloak", { callbackUrl: "/" }, { prompt: "login" })}
+                >
                   Sign in
                 </button>
                 <a className="nav-link" href="/api/auth/keycloak-register">

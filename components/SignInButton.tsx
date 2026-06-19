@@ -6,7 +6,7 @@ export default function SignInButton() {
   return (
    <div className="flex items-center justify-center h-screen">
     <span> Sign in to access this content</span>
-    <button onClick={() => signIn('keycloak', { callbackUrl: '/' })}>
+    <button onClick={() => signIn('keycloak', { callbackUrl: '/' }, { prompt: 'login' })}>
       Sign in with Keycloak
     </button>
     <Link href="/api/auth/keycloak-register">

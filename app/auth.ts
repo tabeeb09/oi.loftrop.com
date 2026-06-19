@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import { decodeJwt } from "jose";
 
-import { env, getAuthSecret } from "@/src/lib/server/env";
+import { env, getAuthSecret, getBaseUrl } from "@/src/lib/server/env";
 import { syncKeycloakUserByEmail } from "@/src/lib/server/keycloak-admin";
 import { auditLog } from "@/src/lib/server/audit-log";
 import { extractRoles } from "@/src/lib/server/roles";
@@ -96,6 +96,10 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = account.access_token;
       }
 
+      if (account?.id_token) {
+        token.idToken = account.id_token;
+      }
+
       if (account?.provider) {
         token.provider = account.provider;
       }
@@ -141,6 +145,7 @@ export const authOptions: NextAuthOptions = {
           });
 
           token.keycloakUserId = synced.user.id;
+          token.keycloakSub = synced.user.id;
           token.roles = Array.from(new Set(synced.roles));
           token.roleSyncFailed = false;
           token.lastRoleSyncAt = Date.now();
@@ -160,7 +165,15 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken;
+      session.idToken = token.idToken;
+      session.provider = token.provider;
+      session.user.id = token.keycloakUserId ?? token.keycloakSub ?? null;
+      session.user.keycloakSub = token.keycloakSub ?? token.keycloakUserId ?? null;
       session.user.roles = token.roles ?? [];
+      session.keycloakLogoutUrl =
+        token.provider === "keycloak" && token.idToken && env.KEYCLOAK_ISSUER
+          ? `${env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(getBaseUrl())}&id_token_hint=${encodeURIComponent(token.idToken)}`
+          : undefined;
       session.error = token.roleSyncFailed ? "RefreshAccessTokenError" : undefined;
       return session;
     },
