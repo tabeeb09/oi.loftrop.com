@@ -2,8 +2,10 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const SCRIPT_PATH = path.resolve("C:\\website\\orca_3mf_filament_report.py");
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT_PATH = path.resolve(currentDir, "..", "orca_3mf_filament_report.py");
 
 function runPython(args) {
   return new Promise((resolve, reject) => {
