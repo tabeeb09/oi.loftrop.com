@@ -16,6 +16,19 @@ export default function SiteShell({ children, title = "3D Printer" }) {
     ["owner", "technician", "print_admin"].some((role) => roles.includes(role));
   const visibleMenuItems = menuItems.filter((item) => !item.adminOnly || isQueueAdmin);
 
+  async function handleSignOut() {
+    const logoutUrl = session?.keycloakLogoutUrl;
+    const provider = session?.provider;
+
+    if (provider === "keycloak" && logoutUrl) {
+      await signOut({ redirect: false, callbackUrl: "/" });
+      window.location.assign(logoutUrl);
+      return;
+    }
+
+    await signOut({ callbackUrl: "/" });
+  }
+
   return (
     <div className={`${styles.shell} ${collapsed ? styles.shellCollapsed : ""}`}>
       <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ""}`}>
@@ -71,7 +84,7 @@ export default function SiteShell({ children, title = "3D Printer" }) {
           {session ? (
             <>
               <span className={styles.headerUser}>{session.user?.email ?? "Signed in"}</span>
-              <button type="button" className={styles.signInButton} onClick={() => signOut({ callbackUrl: "/" })}>
+              <button type="button" className={styles.signInButton} onClick={handleSignOut}>
                 Sign out
               </button>
             </>

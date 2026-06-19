@@ -66,6 +66,14 @@ export const authOptions = {
         token.accessToken = account.access_token;
       }
 
+      if (account?.id_token) {
+        token.idToken = account.id_token;
+      }
+
+      if (account?.provider) {
+        token.provider = account.provider;
+      }
+
       let decodedAccessToken = {};
 
       if (token.accessToken) {
@@ -96,6 +104,8 @@ export const authOptions = {
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken;
+      session.idToken = token.idToken;
+      session.provider = token.provider;
       session.user = {
         ...session.user,
         id: token.keycloakSub ?? null,
@@ -103,6 +113,10 @@ export const authOptions = {
         roles: token.roles ?? [],
         uploadLimitBytes: token.uploadLimitBytes ?? null,
       };
+      session.keycloakLogoutUrl =
+        token.provider === "keycloak" && token.idToken && env.KEYCLOAK_ISSUER
+          ? `${env.KEYCLOAK_ISSUER}/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(env.NEXTAUTH_URL || "https://print.loftrop.com")}&id_token_hint=${encodeURIComponent(token.idToken)}`
+          : undefined;
 
       return session;
     },
