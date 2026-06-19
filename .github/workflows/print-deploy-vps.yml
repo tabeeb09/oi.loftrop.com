@@ -6,6 +6,10 @@ on:
       - main
     paths:
       - "deployables/print-stage/**"
+      - "scripts/bootstrap-print-vps.sh"
+      - "scripts/prepare-print-env.mjs"
+      - "scripts/seed-print-openbao-from-env.mjs"
+      - "scripts/fetch-openbao-secrets.mjs"
       - ".github/workflows/print-deploy-vps.yml"
   workflow_dispatch:
 
