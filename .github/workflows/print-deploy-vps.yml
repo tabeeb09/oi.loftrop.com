@@ -59,6 +59,33 @@ jobs:
             --exclude .env.local \
             "$GITHUB_WORKSPACE/deployables/print-stage/" "${PRINT_DEPLOY_PATH}/"
 
+      - name: Seed print OpenBao path from existing server env
+        shell: bash
+        env:
+          PRINT_APP_BASE_URL: ${{ inputs.print_app_base_url }}
+          PRINT_STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
+          PRINT_STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
+        run: |
+          sudo PRINT_APP_BASE_URL="${PRINT_APP_BASE_URL}" \
+            PRINT_STRIPE_SECRET_KEY="${PRINT_STRIPE_SECRET_KEY}" \
+            PRINT_STRIPE_WEBHOOK_SECRET="${PRINT_STRIPE_WEBHOOK_SECRET}" \
+            GITHUB_WORKSPACE="${GITHUB_WORKSPACE}" \
+            bash -lc '
+              set -euo pipefail
+
+              if [[ ! -f /etc/caid/openbao-init.json ]]; then
+                echo "Missing /etc/caid/openbao-init.json" >&2
+                exit 1
+              fi
+
+              source /etc/website/deploy.env
+              export BAO_ADDR
+              export BAO_TOKEN
+              BAO_TOKEN="$(node -e "const fs=require(\"fs\");const data=JSON.parse(fs.readFileSync(process.argv[1],\"utf8\"));process.stdout.write(data.root_token)" /etc/caid/openbao-init.json)"
+              export PRINT_APP_BASE_URL PRINT_STRIPE_SECRET_KEY PRINT_STRIPE_WEBHOOK_SECRET
+              node "$GITHUB_WORKSPACE/scripts/seed-print-openbao-from-env.mjs" --source /etc/print/deploy.env
+            '
+
       - name: Bootstrap print runtime env from OpenBao
         shell: bash
         env:
