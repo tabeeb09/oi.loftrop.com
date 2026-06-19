@@ -26,7 +26,7 @@ const portfolioItems: NavItem[] = [
 ];
 
 const accountItems: NavItem[] = [
-  { href: "/files", label: "My files", kicker: "Private storage" },
+  { href: "https://print.loftrop.com/files", label: "My files", kicker: "Private storage" },
   { href: "/cms/media", label: "Media CMS", kicker: "RustFS" },
   { href: "/admin/role-requests", label: "Role requests", kicker: "Identity", roles: ["owner"] },
   {
