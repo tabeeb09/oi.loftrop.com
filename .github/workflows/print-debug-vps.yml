@@ -1,0 +1,38 @@
+name: Print Debug On VPS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ${{ fromJSON(vars.DEPLOY_RUNNER_LABELS || '["self-hosted","linux","website-deploy","private-network"]') }}
+    env:
+      PRINT_DEPLOY_PATH: /srv/print/app
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Dump print app runtime state
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd "${PRINT_DEPLOY_PATH}"
+          sudo docker compose -p print \
+            -f docker-compose.print.yaml \
+            -f docker-compose.print.same-host-rustfs.yaml \
+            ps
+          sudo docker compose -p print \
+            -f docker-compose.print.yaml \
+            -f docker-compose.print.same-host-rustfs.yaml \
+            logs --tail 200 website
+          cid="$(sudo docker compose -p print \
+            -f docker-compose.print.yaml \
+            -f docker-compose.print.same-host-rustfs.yaml \
+            ps -q website)"
+          sudo docker exec "$cid" sh -lc 'uname -a; node -v; python3 --version'
+          sudo docker exec "$cid" sh -lc 'ls -la /opt/orca-slicer || true; ls -la /opt/orca-slicer/squashfs-root/bin || true'
+          sudo docker exec "$cid" sh -lc 'ls -la /opt/orca-profiles/BBL/machine; ls -la /opt/orca-profiles/BBL/process; ls -la /opt/orca-profiles/BBL/filament | head -n 50'
+          sudo docker exec "$cid" sh -lc '/opt/orca-slicer/squashfs-root/bin/orca-slicer --help >/tmp/orca-help.out 2>/tmp/orca-help.err || true; echo "--- STDOUT ---"; cat /tmp/orca-help.out; echo "--- STDERR ---"; cat /tmp/orca-help.err; exit 0'
