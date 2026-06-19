@@ -155,6 +155,7 @@
 		"0",
 		"0"
 	],
+	"layer_gcode": "G92 E0",
 	"travel_acceleration": [
 		"10000",
 		"10000"
