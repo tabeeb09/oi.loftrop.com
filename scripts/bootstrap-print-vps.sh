@@ -8,6 +8,7 @@ BOOTSTRAP_ENV_FILE="${BOOTSTRAP_ENV_FILE:-$STATE_DIR/openbao-bootstrap.env}"
 RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-$STATE_DIR/runtime.env}"
 DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-$STATE_DIR/deploy.env}"
 BASE_ENV_FILE="${BASE_ENV_FILE:-$STATE_DIR/base.env}"
+LEGACY_ENV_SOURCE_FILE="${LEGACY_ENV_SOURCE_FILE:-$STATE_DIR/deploy.env}"
 BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE:-wait}"
 
 mkdir -p "$STATE_DIR"
@@ -81,6 +82,13 @@ EOF
 
 load_bootstrap_env() {
   if [[ ! -f "$BOOTSTRAP_ENV_FILE" ]]; then
+    if [[ -f "/etc/website/openbao-bootstrap.env" ]]; then
+      cp /etc/website/openbao-bootstrap.env "$BOOTSTRAP_ENV_FILE"
+      chmod 600 "$BOOTSTRAP_ENV_FILE"
+    fi
+  fi
+
+  if [[ ! -f "$BOOTSTRAP_ENV_FILE" ]]; then
     if [[ -t 0 ]]; then
       prompt_for_bootstrap_env
     else
@@ -97,9 +105,21 @@ load_bootstrap_env() {
   : "${OPENBAO_SECRET_ID:?Missing OPENBAO_SECRET_ID in $BOOTSTRAP_ENV_FILE}"
 }
 
+migrate_legacy_env_if_needed() {
+  if [[ ! -f "$LEGACY_ENV_SOURCE_FILE" ]]; then
+    return
+  fi
+
+  BAO_ADDR="$BAO_ADDR" \
+    OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
+    OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
+    run_node scripts/seed-print-openbao-from-env.mjs --source "$LEGACY_ENV_SOURCE_FILE"
+}
+
 wait_for_valid_bootstrap() {
   while true; do
     load_bootstrap_env
+    migrate_legacy_env_if_needed
 
     if BAO_ADDR="$BAO_ADDR" \
       OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
