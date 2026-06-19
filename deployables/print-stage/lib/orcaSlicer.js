@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 
 import { env } from "./env.js";
+import { FILAMENT_EXTRACT_VALUE } from "./printPolicy.js";
 
 const SLICER_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -130,7 +131,6 @@ export async function sliceModelTo3mf({ buffer, originalFilename, filamentSelect
   await ensureFileExists(env.ORCA_MACHINE_PROFILE, "ORCA_MACHINE_PROFILE");
   await ensureFileExists(env.ORCA_PROCESS_PROFILE, "ORCA_PROCESS_PROFILE");
 
-  const filamentProfilePath = await resolveFilamentProfilePath(filamentSelection);
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "print-slice-"));
   const inputPath = path.join(tempDir, sanitizeFilename(originalFilename));
   const outputPath = path.join(tempDir, `${getFileStem(originalFilename)}.gcode.3mf`);
@@ -138,23 +138,48 @@ export async function sliceModelTo3mf({ buffer, originalFilename, filamentSelect
   try {
     await fs.writeFile(inputPath, buffer);
 
-    const args = [
-      "--arrange",
-      "1",
-      "--orient",
-      "1",
-      "--export-slicedata",
-      tempDir,
-      "--load-settings",
-      `${env.ORCA_MACHINE_PROFILE};${env.ORCA_PROCESS_PROFILE}`,
-      "--load-filaments",
-      filamentProfilePath,
-      "--slice",
-      "0",
-      "--export-3mf",
-      outputPath,
-      inputPath,
-    ];
+    let args;
+
+    if (filamentSelection === FILAMENT_EXTRACT_VALUE) {
+      const extension = path.extname(originalFilename || "").toLowerCase();
+
+      if (extension !== ".3mf") {
+        throw new Error("Extract from file is only supported for Orca project 3MF uploads.");
+      }
+
+      args = [
+        "--arrange",
+        "1",
+        "--orient",
+        "1",
+        "--export-slicedata",
+        tempDir,
+        "--slice",
+        "0",
+        "--export-3mf",
+        outputPath,
+        inputPath,
+      ];
+    } else {
+      const filamentProfilePath = await resolveFilamentProfilePath(filamentSelection);
+      args = [
+        "--arrange",
+        "1",
+        "--orient",
+        "1",
+        "--export-slicedata",
+        tempDir,
+        "--load-settings",
+        `${env.ORCA_MACHINE_PROFILE};${env.ORCA_PROCESS_PROFILE}`,
+        "--load-filaments",
+        filamentProfilePath,
+        "--slice",
+        "0",
+        "--export-3mf",
+        outputPath,
+        inputPath,
+      ];
+    }
 
     await runProcess(env.ORCA_SLICER_BIN, args, SLICER_TIMEOUT_MS);
     const outputBuffer = await fs.readFile(outputPath);

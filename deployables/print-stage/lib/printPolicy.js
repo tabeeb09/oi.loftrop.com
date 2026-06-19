@@ -11,6 +11,7 @@ export const FILAMENT_OPTIONS = [
   { value: "TPU", label: "TPU" },
   { value: "PA", label: "PA / Nylon" },
   { value: "PC", label: "PC" },
+  { value: FILAMENT_EXTRACT_VALUE, label: "Extract from file (advanced)" },
 ];
 
 const FILAMENT_OPTION_VALUES = new Set(FILAMENT_OPTIONS.map((option) => option.value));
@@ -42,6 +43,10 @@ export function isSliceableModelFile(file) {
 }
 
 export function getEffectiveFilamentLabel(file) {
+  if (Array.isArray(file?.extractedFilamentBreakdown) && file.extractedFilamentBreakdown.length > 1) {
+    return "Multiple filaments";
+  }
+
   return file?.extractedFilamentType || file?.filamentSelection || "Not selected";
 }
 
@@ -50,6 +55,13 @@ export function getPrintEligibility(file) {
     return {
       canPrint: false,
       reason: "Select a filament before printing.",
+    };
+  }
+
+  if (isExtractFilamentSelection(file?.filamentSelection) && !canExtractFilamentFromFile(file)) {
+    return {
+      canPrint: false,
+      reason: "Extract from file is only supported for Orca project 3MF uploads.",
     };
   }
 
@@ -67,20 +79,18 @@ export function getPrintEligibility(file) {
     };
   }
 
-  if (!isExtractFilamentSelection(file?.filamentSelection) && isSliceableModelFile(file)) {
-    if (file?.sliceStatus === "failed") {
-      return {
-        canPrint: false,
-        reason: file?.sliceError || "Automatic slicing failed for this file.",
-      };
-    }
+  if (file?.sliceStatus === "failed") {
+    return {
+      canPrint: false,
+      reason: file?.sliceError || "Automatic slicing failed for this file.",
+    };
+  }
 
-    if (file?.sliceStatus !== "sliced" || !file?.slicedObjectKey) {
-      return {
-        canPrint: false,
-        reason: "Automatic slicing has not completed yet.",
-      };
-    }
+  if (isSliceableModelFile(file) && (file?.sliceStatus !== "sliced" || !file?.slicedObjectKey)) {
+    return {
+      canPrint: false,
+      reason: "Automatic slicing has not completed yet.",
+    };
   }
 
   return {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   FILAMENT_OPTIONS,
+  FILAMENT_EXTRACT_VALUE,
   getEffectiveFilamentLabel,
   getPrintEligibility,
 } from "../lib/printPolicy";
@@ -30,6 +31,93 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
+function formatCurrency(minor, currency) {
+  if (typeof minor !== "number" || Number.isNaN(minor)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: (currency || "gbp").toUpperCase(),
+  }).format(minor / 100);
+}
+
+function PaymentModal({ file, onClose, onContinue, loading }) {
+  if (!file?.paymentQuote) {
+    return null;
+  }
+
+  const quote = file.paymentQuote;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.4)",
+        display: "grid",
+        placeItems: "center",
+        padding: "1rem",
+        zIndex: 500,
+      }}
+    >
+      <div
+        style={{
+          width: "min(40rem, 100%)",
+          background: "#fff",
+          border: "1px solid rgba(23,27,31,0.18)",
+          padding: "1rem",
+          display: "grid",
+          gap: "0.9rem",
+        }}
+      >
+        <div>
+          <h3 style={{ margin: 0 }}>Pay before queueing print</h3>
+          <p style={{ margin: "0.5rem 0 0", color: "#555" }}>{file.originalFilename}</p>
+        </div>
+
+        <div style={{ display: "grid", gap: "0.5rem" }}>
+          {quote.lineItems.map((lineItem) => (
+            <div
+              key={`${lineItem.filamentType}-${lineItem.grams}`}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto auto",
+                gap: "0.75rem",
+                alignItems: "center",
+              }}
+            >
+              <strong>{lineItem.label}</strong>
+              <span>{lineItem.grams.toFixed(2)} g</span>
+              <span>{formatCurrency(lineItem.amountMinor, lineItem.currency)}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ borderTop: "1px solid rgba(0,0,0,0.08)", paddingTop: "0.75rem", display: "grid", gap: "0.35rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Total grams</span>
+            <strong>{quote.totalGrams.toFixed(2)} g</strong>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Total</span>
+            <strong>{formatCurrency(quote.totalMinor, quote.currency)}</strong>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+          <button type="button" onClick={onClose} disabled={loading}>Close</button>
+          <button type="button" onClick={onContinue} disabled={loading}>
+            {loading ? "Preparing checkout..." : "Continue to Stripe Checkout"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FileManager() {
   const fileInputRef = useRef(null);
   const [files, setFiles] = useState([]);
@@ -41,6 +129,8 @@ export default function FileManager() {
   const [deletingId, setDeletingId] = useState(null);
   const [printingId, setPrintingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [checkoutLoadingId, setCheckoutLoadingId] = useState(null);
+  const [paymentTargetFile, setPaymentTargetFile] = useState(null);
   const [queueSummary, setQueueSummary] = useState({
     usedBytes: 0,
     uploadLimitBytes: null,
@@ -48,6 +138,7 @@ export default function FileManager() {
   });
   const [actorState, setActorState] = useState({
     isQueueAdmin: false,
+    paymentsEnabled: false,
   });
   const [nextCursor, setNextCursor] = useState(null);
   const [selectedFilament, setSelectedFilament] = useState("");
@@ -75,18 +166,8 @@ export default function FileManager() {
         return next;
       });
       setNextCursor(payload.nextCursor);
-      setQueueSummary(
-        payload.summary ?? {
-          usedBytes: 0,
-          uploadLimitBytes: null,
-          remainingBytes: null,
-        },
-      );
-      setActorState(
-        payload.actor ?? {
-          isQueueAdmin: false,
-        },
-      );
+      setQueueSummary(payload.summary ?? { usedBytes: 0, uploadLimitBytes: null, remainingBytes: null });
+      setActorState(payload.actor ?? { isQueueAdmin: false, paymentsEnabled: false });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Failed to load files.");
     } finally {
@@ -143,13 +224,8 @@ export default function FileManager() {
     setNotice(null);
 
     try {
-      if (
-        typeof queueSummary.remainingBytes === "number" &&
-        file.size > queueSummary.remainingBytes
-      ) {
-        setNotice(
-          `Upload limit exceeded. ${formatBytes(queueSummary.remainingBytes)} remaining for this account.`,
-        );
+      if (typeof queueSummary.remainingBytes === "number" && file.size > queueSummary.remainingBytes) {
+        setNotice(`Upload limit exceeded. ${formatBytes(queueSummary.remainingBytes)} remaining for this account.`);
         setLoading(false);
         return;
       }
@@ -226,9 +302,7 @@ export default function FileManager() {
         throw new Error(payload.error || "Failed to update print status.");
       }
 
-      setFiles((current) =>
-        current.map((file) => (file.id === fileId ? payload.file : file)),
-      );
+      setFiles((current) => current.map((file) => (file.id === fileId ? payload.file : file)));
       await loadFiles();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Print request failed.");
@@ -307,9 +381,7 @@ export default function FileManager() {
         throw new Error(payload.error || "Failed to update filament.");
       }
 
-      setFiles((current) =>
-        current.map((file) => (file.id === fileId ? payload.file : file)),
-      );
+      setFiles((current) => current.map((file) => (file.id === fileId ? payload.file : file)));
       setFileFilamentEdits((current) => ({ ...current, [fileId]: payload.file.filamentSelection || "" }));
       try {
         await verifyFilamentForFile(fileId);
@@ -341,61 +413,80 @@ export default function FileManager() {
     }
   }
 
+  async function handleStartPayment(file) {
+    setCheckoutLoadingId(file.id);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/files/${encodeURIComponent(file.id)}/checkout-session`, {
+        method: "POST",
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "Failed to start payment.");
+      }
+
+      if (payload.alreadyPaid) {
+        setPaymentTargetFile(null);
+        await loadFiles();
+        return;
+      }
+
+      if (!payload.checkoutUrl) {
+        throw new Error("Stripe did not return a checkout URL.");
+      }
+
+      window.location.assign(payload.checkoutUrl);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Failed to start payment.");
+    } finally {
+      setCheckoutLoadingId(null);
+    }
+  }
+
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>
       <section className="panel">
         <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Upload file</h2>
         <p style={{ margin: 0, color: "#555" }}>
-          Used: <strong>{formatBytes(queueSummary.usedBytes)}</strong> · Remaining:{" "}
-          <strong>{formatBytes(queueSummary.remainingBytes)}</strong>
+          Used: <strong>{formatBytes(queueSummary.usedBytes)}</strong> · Remaining: <strong>{formatBytes(queueSummary.remainingBytes)}</strong>
         </p>
+        {!actorState.paymentsEnabled ? (
+          <p style={{ margin: 0, color: "#8a6500" }}>
+            Payment checkout is not configured in this environment yet. Files can still be uploaded and processed.
+          </p>
+        ) : null}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".3mf,.stl,.obj,.step,.stp,.iges,.igs,.ply,.amf,.gcode"
+          accept=".3mf,.stl,.obj,.step,.stp,.iges,.igs,.ply,.amf"
           onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
           disabled={loading}
         />
         <label style={{ display: "grid", gap: "0.35rem" }}>
           <span style={{ fontWeight: 600 }}>Filament</span>
-          <select
-            value={selectedFilament}
-            onChange={(event) => setSelectedFilament(event.target.value)}
-            disabled={loading}
-          >
+          <select value={selectedFilament} onChange={(event) => setSelectedFilament(event.target.value)} disabled={loading}>
             <option value="">Select filament</option>
             {FILAMENT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </label>
+        {selectedFilament === FILAMENT_EXTRACT_VALUE ? (
+          <p style={{ margin: 0, color: "#555" }}>
+            Advanced mode expects an unsliced Orca project 3MF. The backend slices it using the embedded multicolour/material setup and calculates a per-filament grams breakdown.
+          </p>
+        ) : null}
         <p style={{ margin: 0, color: "#555" }}>{selectedSummary}</p>
         <div>
-          <button type="button" onClick={handleUpload} disabled={loading}>
-            {loading ? "Working..." : "Upload"}
-          </button>
+          <button type="button" onClick={handleUpload} disabled={loading}>{loading ? "Working..." : "Upload"}</button>
         </div>
         {notice ? (
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            style={{
-              border: "1px solid rgba(164,0,0,0.2)",
-              background: "#fff4f4",
-              padding: "0.9rem",
-              display: "grid",
-              gap: "0.75rem",
-            }}
-          >
-            <strong>Upload limit exceeded</strong>
+          <div role="alertdialog" aria-modal="true" style={{ border: "1px solid rgba(164,0,0,0.2)", background: "#fff4f4", padding: "0.9rem", display: "grid", gap: "0.75rem" }}>
+            <strong>Notice</strong>
             <p style={{ margin: 0, color: "#7a0000" }}>{notice}</p>
-            <div>
-              <button type="button" onClick={() => setNotice(null)}>
-                Close
-              </button>
-            </div>
+            <div><button type="button" onClick={() => setNotice(null)}>Close</button></div>
           </div>
         ) : null}
         {error ? <p style={{ margin: 0, color: "#a40000" }}>{error}</p> : null}
@@ -404,9 +495,7 @@ export default function FileManager() {
       <section className="panel panelWide">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Your files</h2>
-          <button type="button" onClick={() => loadFiles()} disabled={loading}>
-            Reload
-          </button>
+          <button type="button" onClick={() => loadFiles()} disabled={loading}>Reload</button>
         </div>
 
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "1rem" }}>
@@ -427,109 +516,124 @@ export default function FileManager() {
                 const fileWithPendingSelection = { ...file, filamentSelection: effectiveSelection };
                 const printEligibility = getPrintEligibility(fileWithPendingSelection);
                 const needsProcessingCheck = file.extractionStatus !== "verified";
+                const paymentRequired = file.paymentStatus !== "paid";
+                const quote = file.paymentQuote;
 
                 return (
-                <tr key={file.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
-                  <td style={{ padding: "0.65rem 0" }}>{file.originalFilename}</td>
-                  <td style={{ padding: "0.65rem 0", minWidth: "13rem" }}>
-                    <div style={{ display: "grid", gap: "0.4rem" }}>
-                      <select
-                        value={effectiveSelection}
-                        onChange={(event) => handleFilamentChange(file.id, event.target.value)}
-                      >
-                        <option value="">Select filament</option>
-                        {FILAMENT_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <small style={{ color: "#555" }}>{getEffectiveFilamentLabel(fileWithPendingSelection)}</small>
-                      {file.extractionStatus === "verified" && typeof file.extractedGrams === "number" ? (
-                        <small style={{ color: "#555" }}>
-                          Filament mass: {file.extractedGrams.toFixed(2)} g
-                        </small>
-                      ) : null}
-                      {file.extractionStatus === "failed" && file.extractionError ? (
-                        <small style={{ color: "#a40000" }}>{file.extractionError}</small>
-                      ) : null}
-                    </div>
-                  </td>
-                  <td style={{ padding: "0.65rem 0" }}>{formatBytes(file.sizeBytes)}</td>
-                  <td style={{ padding: "0.65rem 0", textTransform: "capitalize" }}>
-                    {file.printStatus && file.printStatus !== "idle"
-                      ? file.printStatus === "printing"
-                        ? "Being printed"
-                        : "In queue"
-                      : file.status}
-                  </td>
-                  <td style={{ padding: "0.65rem 0" }}>{formatDate(file.createdAt)}</td>
-                  <td style={{ padding: "0.65rem 0", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDownload(file.id)}
-                      disabled={downloadingId === file.id}
-                    >
-                      {downloadingId === file.id ? "Preparing..." : "Download"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(file.id)}
-                      disabled={deletingId === file.id || (file.printStatus && file.printStatus !== "idle")}
-                    >
-                      {deletingId === file.id ? "Deleting..." : "Delete"}
-                    </button>
-                    {file.printStatus === "idle" || !file.printStatus ? (
-                      <>
-                        {needsProcessingCheck ? (
-                          <button
-                            type="button"
-                            onClick={() => handleVerifyFilament(file.id)}
-                            disabled={verifyingId === file.id}
-                          >
-                            {verifyingId === file.id ? "Processing..." : "Process file"}
-                          </button>
+                  <tr key={file.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
+                    <td style={{ padding: "0.65rem 0" }}>{file.originalFilename}</td>
+                    <td style={{ padding: "0.65rem 0", minWidth: "16rem" }}>
+                      <div style={{ display: "grid", gap: "0.4rem" }}>
+                        <select value={effectiveSelection} onChange={(event) => handleFilamentChange(file.id, event.target.value)}>
+                          <option value="">Select filament</option>
+                          {FILAMENT_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                        <small style={{ color: "#555" }}>{getEffectiveFilamentLabel(fileWithPendingSelection)}</small>
+                        {Array.isArray(file.extractedFilamentBreakdown) && file.extractedFilamentBreakdown.length ? (
+                          <div style={{ display: "grid", gap: "0.2rem" }}>
+                            {file.extractedFilamentBreakdown.map((entry) => (
+                              <small key={`${file.id}-${entry.filamentType}-${entry.grams}`} style={{ color: "#555" }}>
+                                {entry.filamentType}: {entry.grams.toFixed(2)} g
+                              </small>
+                            ))}
+                          </div>
                         ) : null}
-                        <button
-                          type="button"
-                          onClick={() => handleRequestPrint(file.id)}
-                          disabled={printingId === file.id || !printEligibility.canPrint}
-                          title={printEligibility.reason || undefined}
-                        >
-                          {printingId === file.id ? "Queueing..." : "Print"}
-                        </button>
-                      </>
-                    ) : (
+                        {file.extractionStatus === "verified" && typeof file.extractedGrams === "number" ? (
+                          <small style={{ color: "#555" }}>Filament mass: {file.extractedGrams.toFixed(2)} g</small>
+                        ) : null}
+                        {quote ? (
+                          <small style={{ color: "#555" }}>Price: {formatCurrency(quote.totalMinor, quote.currency)}</small>
+                        ) : null}
+                        {file.paymentStatus === "paid" ? (
+                          <small style={{ color: "#2d6a4f" }}>Payment received</small>
+                        ) : !actorState.paymentsEnabled ? (
+                          <small style={{ color: "#8a6500" }}>Payment checkout not configured yet</small>
+                        ) : file.paymentStatus === "checkout_pending" ? (
+                          <small style={{ color: "#8a6500" }}>Checkout created, payment pending</small>
+                        ) : (
+                          <small style={{ color: "#8a6500" }}>Payment required before queueing print</small>
+                        )}
+                        {file.extractionStatus === "failed" && file.extractionError ? (
+                          <small style={{ color: "#a40000" }}>{file.extractionError}</small>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td style={{ padding: "0.65rem 0" }}>{formatBytes(file.sizeBytes)}</td>
+                    <td style={{ padding: "0.65rem 0", textTransform: "capitalize" }}>
+                      {file.printStatus && file.printStatus !== "idle"
+                        ? file.printStatus === "printing"
+                          ? "Being printed"
+                          : "In queue"
+                        : file.status}
+                    </td>
+                    <td style={{ padding: "0.65rem 0" }}>{formatDate(file.createdAt)}</td>
+                    <td style={{ padding: "0.65rem 0", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                      <button type="button" onClick={() => handleDownload(file.id)} disabled={downloadingId === file.id}>
+                        {downloadingId === file.id ? "Preparing..." : "Download"}
+                      </button>
                       <button
                         type="button"
-                        onClick={() => handleCancelPrint(file.id)}
-                        disabled={
-                          printingId === file.id ||
-                          (file.printStatus === "printing" && !actorState.isQueueAdmin)
-                        }
-                        title={
-                          file.printStatus === "printing" && !actorState.isQueueAdmin
-                            ? "Only an admin can cancel a file once printing has started."
-                            : undefined
-                        }
+                        onClick={() => handleDelete(file.id)}
+                        disabled={deletingId === file.id || (file.printStatus && file.printStatus !== "idle")}
                       >
-                        {file.printStatus === "printing"
-                          ? printingId === file.id
-                            ? "Updating..."
-                            : "Being printed"
-                          : printingId === file.id
-                            ? "Updating..."
-                            : "Cancel print"}
+                        {deletingId === file.id ? "Deleting..." : "Delete"}
                       </button>
-                    )}
-                  </td>
-                </tr>
-              )})
+                      {file.printStatus === "idle" || !file.printStatus ? (
+                        <>
+                          {needsProcessingCheck ? (
+                            <button type="button" onClick={() => handleVerifyFilament(file.id)} disabled={verifyingId === file.id}>
+                              {verifyingId === file.id ? "Processing..." : "Process file"}
+                            </button>
+                          ) : null}
+                          {paymentRequired ? (
+                            <button
+                              type="button"
+                              onClick={() => setPaymentTargetFile(file)}
+                              disabled={checkoutLoadingId === file.id || !printEligibility.canPrint || !quote || !actorState.paymentsEnabled}
+                              title={printEligibility.reason || undefined}
+                            >
+                              {checkoutLoadingId === file.id ? "Preparing..." : "Pay to print"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleRequestPrint(file.id)}
+                              disabled={printingId === file.id || !printEligibility.canPrint}
+                              title={printEligibility.reason || undefined}
+                            >
+                              {printingId === file.id ? "Queueing..." : "Print"}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCancelPrint(file.id)}
+                          disabled={printingId === file.id || (file.printStatus === "printing" && !actorState.isQueueAdmin)}
+                          title={
+                            file.printStatus === "printing" && !actorState.isQueueAdmin
+                              ? "Only an admin can cancel a file once printing has started."
+                              : undefined
+                          }
+                        >
+                          {file.printStatus === "printing"
+                            ? printingId === file.id
+                              ? "Updating..."
+                              : "Being printed"
+                            : printingId === file.id
+                              ? "Updating..."
+                              : "Cancel print"}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={6} style={{ padding: "0.9rem 0", color: "#666" }}>
-                  No files uploaded yet.
-                </td>
+                <td colSpan={6} style={{ padding: "0.9rem 0", color: "#666" }}>No files uploaded yet.</td>
               </tr>
             )}
           </tbody>
@@ -537,12 +641,17 @@ export default function FileManager() {
 
         {nextCursor ? (
           <div style={{ marginTop: "1rem" }}>
-            <button type="button" onClick={() => loadFiles(nextCursor, true)} disabled={loading}>
-              Load more
-            </button>
+            <button type="button" onClick={() => loadFiles(nextCursor, true)} disabled={loading}>Load more</button>
           </div>
         ) : null}
       </section>
+
+      <PaymentModal
+        file={paymentTargetFile}
+        loading={paymentTargetFile ? checkoutLoadingId === paymentTargetFile.id : false}
+        onClose={() => setPaymentTargetFile(null)}
+        onContinue={() => paymentTargetFile && handleStartPayment(paymentTargetFile)}
+      />
     </div>
   );
 }

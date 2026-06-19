@@ -17,7 +17,13 @@ import { env, parseCsv } from "./env";
 import { extractOrca3mfMetadataFromBuffer } from "./orca3mf";
 import { extractFirstPlateGcodeFrom3mfBuffer, inspect3mfPackageFromBuffer } from "./orca3mfPackage";
 import { sliceModelTo3mf } from "./orcaSlicer";
-import { getPrintEligibility, isSliceableModelFile, isValidFilamentSelection } from "./printPolicy";
+import { computePrintPriceQuote } from "./printPricing.js";
+import {
+  FILAMENT_EXTRACT_VALUE,
+  getPrintEligibility,
+  isSliceableModelFile,
+  isValidFilamentSelection,
+} from "./printPolicy";
 
 const DEFAULT_PAGE_SIZE = 25;
 const DOWNLOAD_URL_TTL_SECONDS = 60;
@@ -123,6 +129,19 @@ function hasQueueArtifact(manifest) {
   return typeof manifest?.printQueueObjectKey === "string" &&
     manifest.printQueueObjectKey.length > 0 &&
     /\.gcode$/i.test(manifest.printQueueObjectKey);
+}
+
+function decorateManifest(manifest) {
+  return {
+    ...manifest,
+    paymentStatus: manifest.paymentStatus ?? "unpaid",
+    paymentQuote: computePrintPriceQuote(manifest),
+    paymentSessionId: manifest.paymentSessionId ?? null,
+    paymentIntentId: manifest.paymentIntentId ?? null,
+    paymentAmountTotalMinor: manifest.paymentAmountTotalMinor ?? null,
+    paymentCurrency: manifest.paymentCurrency ?? null,
+    paidAt: manifest.paidAt ?? null,
+  };
 }
 
 function assertAllowedFile(request) {
@@ -263,6 +282,9 @@ async function hydrateManifest(manifest) {
     extractionStatus: manifest.extractionStatus ?? "pending",
     extractedFilamentType: manifest.extractedFilamentType ?? null,
     extractedGrams: manifest.extractedGrams ?? null,
+    extractedFilamentBreakdown: Array.isArray(manifest.extractedFilamentBreakdown)
+      ? manifest.extractedFilamentBreakdown
+      : [],
     extractionError: manifest.extractionError ?? null,
     sliceStatus: manifest.sliceStatus ?? "pending",
     slicedObjectKey: manifest.slicedObjectKey ?? null,
@@ -271,6 +293,12 @@ async function hydrateManifest(manifest) {
     slicedAt: manifest.slicedAt ?? null,
     gcodeObjectKey: manifest.gcodeObjectKey ?? null,
     gcodeFilename: manifest.gcodeFilename ?? null,
+    paymentStatus: manifest.paymentStatus ?? "unpaid",
+    paymentSessionId: manifest.paymentSessionId ?? null,
+    paymentIntentId: manifest.paymentIntentId ?? null,
+    paymentAmountTotalMinor: manifest.paymentAmountTotalMinor ?? null,
+    paymentCurrency: manifest.paymentCurrency ?? null,
+    paidAt: manifest.paidAt ?? null,
   };
 
   if (
@@ -281,7 +309,7 @@ async function hydrateManifest(manifest) {
     await writeManifest(hydrated);
   }
 
-  return hydrated;
+  return decorateManifest(hydrated);
 }
 
 async function listManifestFiles(ownerSub, limit, offset) {
@@ -423,6 +451,13 @@ async function processFileForPrinting(manifest) {
       extractionError: "Only unsliced model files or unsliced Orca project files are accepted.",
       sliceStatus: "failed",
       sliceError: "Only unsliced model files or unsliced Orca project files are accepted.",
+      extractedFilamentBreakdown: [],
+      paymentStatus: "unpaid",
+      paymentSessionId: null,
+      paymentIntentId: null,
+      paymentAmountTotalMinor: null,
+      paymentCurrency: null,
+      paidAt: null,
       updatedAt: new Date().toISOString(),
     };
     await writeManifest(failed);
@@ -441,6 +476,13 @@ async function processFileForPrinting(manifest) {
         extractionError: "Pre-sliced 3MF files are not accepted. Upload a model or an unsliced Orca project file.",
         sliceStatus: "failed",
         sliceError: "Pre-sliced 3MF files are not accepted. Upload a model or an unsliced Orca project file.",
+        extractedFilamentBreakdown: [],
+        paymentStatus: "unpaid",
+        paymentSessionId: null,
+        paymentIntentId: null,
+        paymentAmountTotalMinor: null,
+        paymentCurrency: null,
+        paidAt: null,
         updatedAt: new Date().toISOString(),
       };
       await writeManifest(failed);
@@ -483,6 +525,12 @@ async function processFileForPrinting(manifest) {
       sliceStatus: "sliced",
       sliceError: null,
       slicedAt: new Date().toISOString(),
+      paymentStatus: "unpaid",
+      paymentSessionId: null,
+      paymentIntentId: null,
+      paymentAmountTotalMinor: null,
+      paymentCurrency: null,
+      paidAt: null,
       updatedAt: new Date().toISOString(),
     };
     await writeManifest(updated);
@@ -495,6 +543,13 @@ async function processFileForPrinting(manifest) {
       extractionError: message,
       sliceStatus: "failed",
       sliceError: message,
+      extractedFilamentBreakdown: [],
+      paymentStatus: "unpaid",
+      paymentSessionId: null,
+      paymentIntentId: null,
+      paymentAmountTotalMinor: null,
+      paymentCurrency: null,
+      paidAt: null,
       updatedAt: new Date().toISOString(),
     };
     await writeManifest(failed);
@@ -505,6 +560,13 @@ async function processFileForPrinting(manifest) {
 export async function createUploadUrl(actor, request) {
   if (!isValidFilamentSelection(request.filamentSelection)) {
     throw new Error("A valid filament selection is required before upload.");
+  }
+
+  if (
+    request.filamentSelection === FILAMENT_EXTRACT_VALUE &&
+    getFileExtension(request.filename) !== "3mf"
+  ) {
+    throw new Error("Extract from file is only supported for Orca project 3MF uploads.");
   }
 
   const usedBytes = await computeUsedBytes(actor.sub);
@@ -543,6 +605,7 @@ export async function createUploadUrl(actor, request) {
     extractionStatus: "pending",
     extractedFilamentType: null,
     extractedGrams: null,
+    extractedFilamentBreakdown: [],
     extractionError: null,
     sliceStatus: isSliceableModelFile({ originalFilename: request.filename }) ? "pending" : "not_required",
     slicedObjectKey: null,
@@ -551,6 +614,12 @@ export async function createUploadUrl(actor, request) {
     slicedAt: null,
     gcodeObjectKey: null,
     gcodeFilename: null,
+    paymentStatus: "unpaid",
+    paymentSessionId: null,
+    paymentIntentId: null,
+    paymentAmountTotalMinor: null,
+    paymentCurrency: null,
+    paidAt: null,
   };
 
   await writeManifest(manifest);
@@ -596,6 +665,7 @@ export async function listFiles(actor, options = {}) {
       isFileAdmin: actor.isFileAdmin,
       isQueueAdmin: actor.isQueueAdmin,
       email: actor.email,
+      paymentsEnabled: Boolean(env.STRIPE_SECRET_KEY),
     },
   };
 }
@@ -690,6 +760,7 @@ export async function updateFileMetadata(actor, fileId, updates) {
     next.extractionStatus = "pending";
     next.extractedFilamentType = null;
     next.extractedGrams = null;
+    next.extractedFilamentBreakdown = [];
     next.extractionError = null;
     next.sliceStatus = isSliceableModelFile(next) ? "pending" : "not_required";
     next.slicedObjectKey = null;
@@ -698,6 +769,12 @@ export async function updateFileMetadata(actor, fileId, updates) {
     next.slicedAt = null;
     next.gcodeObjectKey = null;
     next.gcodeFilename = null;
+    next.paymentStatus = "unpaid";
+    next.paymentSessionId = null;
+    next.paymentIntentId = null;
+    next.paymentAmountTotalMinor = null;
+    next.paymentCurrency = null;
+    next.paidAt = null;
   }
 
   next.updatedAt = new Date().toISOString();
@@ -717,6 +794,70 @@ export async function verifyFileFilamentMetadata(actor, fileId) {
   }
 
   return processFileForPrinting(manifest);
+}
+
+export async function getFileForActor(actor, fileId) {
+  const manifest = await readManifest(fileId);
+
+  if (!manifest) {
+    throw new Error("File not found.");
+  }
+
+  if (!canAccessFile(actor, manifest.ownerSub)) {
+    throw new Error("Forbidden");
+  }
+
+  return hydrateManifest(manifest);
+}
+
+export async function markPaymentSessionPending(actor, fileId, paymentSession) {
+  const manifest = await readManifest(fileId);
+
+  if (!manifest) {
+    throw new Error("File not found.");
+  }
+
+  if (!canAccessFile(actor, manifest.ownerSub)) {
+    throw new Error("Forbidden");
+  }
+
+  const updated = {
+    ...manifest,
+    paymentStatus: "checkout_pending",
+    paymentSessionId: paymentSession.id,
+    paymentIntentId: typeof paymentSession.payment_intent === "string" ? paymentSession.payment_intent : null,
+    paymentAmountTotalMinor: paymentSession.amount_total ?? null,
+    paymentCurrency: paymentSession.currency ?? null,
+    paidAt: null,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await writeManifest(updated);
+  return hydrateManifest(updated);
+}
+
+export async function markFilePaidFromCheckoutSession(fileId, checkoutSession) {
+  const manifest = await readManifest(fileId);
+
+  if (!manifest) {
+    throw new Error("File not found.");
+  }
+
+  const updated = {
+    ...manifest,
+    paymentStatus: "paid",
+    paymentSessionId: checkoutSession.id,
+    paymentIntentId: typeof checkoutSession.payment_intent === "string"
+      ? checkoutSession.payment_intent
+      : manifest.paymentIntentId ?? null,
+    paymentAmountTotalMinor: checkoutSession.amount_total ?? manifest.paymentAmountTotalMinor ?? null,
+    paymentCurrency: checkoutSession.currency ?? manifest.paymentCurrency ?? null,
+    paidAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await writeManifest(updated);
+  return hydrateManifest(updated);
 }
 
 export async function requestPrint(actor, fileId) {
@@ -746,6 +887,10 @@ export async function requestPrint(actor, fileId) {
 
   if (manifest.sliceStatus !== "sliced" || !hasGeneratedGcodeArtifact(manifest)) {
     throw new Error("Only backend-sliced files with a generated G-code artifact can enter the print queue.");
+  }
+
+  if (manifest.paymentStatus !== "paid") {
+    throw new Error("Payment is required before this file can enter the print queue.");
   }
 
   const queueObjectKey = buildPrintQueueObjectKey(
