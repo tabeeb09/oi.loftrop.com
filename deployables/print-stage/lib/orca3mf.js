@@ -9,7 +9,7 @@ const SCRIPT_PATH = path.resolve(currentDir, "..", "orca_3mf_filament_report.py"
 
 function runPython(args) {
   return new Promise((resolve, reject) => {
-    const child = spawn("python", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const child = spawn(process.env.PYTHON_BIN || "python3", args, { stdio: ["ignore", "pipe", "pipe"] });
     let stdout = "";
     let stderr = "";
 
