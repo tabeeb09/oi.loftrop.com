@@ -63,12 +63,14 @@ jobs:
         shell: bash
         env:
           BAO_JWT_TOKEN: ${{ steps.oidc.outputs.token }}
+          BOOTSTRAP_ON_FAILURE: exit
           PRINT_APP_BASE_URL: ${{ inputs.print_app_base_url }}
           PRINT_STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
           PRINT_STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
         run: |
           sudo install -d -m 700 /etc/print
           sudo BAO_JWT_TOKEN="${BAO_JWT_TOKEN}" \
+            BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE}" \
             PRINT_APP_BASE_URL="${PRINT_APP_BASE_URL}" \
             PRINT_STRIPE_SECRET_KEY="${PRINT_STRIPE_SECRET_KEY}" \
             PRINT_STRIPE_WEBHOOK_SECRET="${PRINT_STRIPE_WEBHOOK_SECRET}" \
