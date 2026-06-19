@@ -12,6 +12,16 @@ on:
       - "scripts/fetch-openbao-secrets.mjs"
       - ".github/workflows/print-deploy-vps.yml"
   workflow_dispatch:
+    inputs:
+      print_app_base_url:
+        description: Base URL for the print app, used for initial OpenBao seed if missing from legacy env
+        required: false
+      stripe_secret_key:
+        description: Stripe secret key, used only for initial OpenBao seed if missing from legacy env
+        required: false
+      stripe_webhook_secret:
+        description: Stripe webhook secret, used only for initial OpenBao seed if missing from legacy env
+        required: false
 
 permissions:
   contents: read
@@ -41,9 +51,16 @@ jobs:
 
       - name: Bootstrap print runtime env from OpenBao
         shell: bash
+        env:
+          PRINT_APP_BASE_URL: ${{ inputs.print_app_base_url }}
+          PRINT_STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
+          PRINT_STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
         run: |
           sudo install -d -m 700 /etc/print
-          sudo bash "$GITHUB_WORKSPACE/scripts/bootstrap-print-vps.sh"
+          sudo PRINT_APP_BASE_URL="${PRINT_APP_BASE_URL}" \
+            PRINT_STRIPE_SECRET_KEY="${PRINT_STRIPE_SECRET_KEY}" \
+            PRINT_STRIPE_WEBHOOK_SECRET="${PRINT_STRIPE_WEBHOOK_SECRET}" \
+            bash "$GITHUB_WORKSPACE/scripts/bootstrap-print-vps.sh"
 
       - name: Build and restart print app
         shell: bash

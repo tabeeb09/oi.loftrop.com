@@ -213,11 +213,17 @@ async function main() {
   }
 
   const sourceEnv = parseEnvFile(sourceFile);
-  const values = Object.fromEntries(
-    secretKeys
-      .filter((key) => sourceEnv[key])
-      .map((key) => [key, sourceEnv[key]]),
-  );
+  const overrideEnv = {
+    APP_BASE_URL: process.env.PRINT_APP_BASE_URL || sourceEnv.APP_BASE_URL || sourceEnv.NEXTAUTH_URL,
+    STRIPE_SECRET_KEY: process.env.PRINT_STRIPE_SECRET_KEY || sourceEnv.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET:
+      process.env.PRINT_STRIPE_WEBHOOK_SECRET || sourceEnv.STRIPE_WEBHOOK_SECRET,
+  };
+  const combined = {
+    ...sourceEnv,
+    ...Object.fromEntries(Object.entries(overrideEnv).filter(([, value]) => value)),
+  };
+  const values = Object.fromEntries(secretKeys.filter((key) => combined[key]).map((key) => [key, combined[key]]));
 
   const missing = ["NEXTAUTH_URL", "NEXTAUTH_SECRET", "KEYCLOAK_ISSUER", "KEYCLOAK_CLIENT_ID", "KEYCLOAK_CLIENT_SECRET", "APP_BASE_URL", "S3_ENDPOINT", "S3_PUBLIC_ENDPOINT", "S3_PRIVATE_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "FILE_UPLOAD_MAX_BYTES", "FILE_ALLOWED_EXTENSIONS"].filter((key) => !values[key]);
 
