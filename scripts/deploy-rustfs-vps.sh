@@ -48,6 +48,8 @@ for required_var in "${required_vars[@]}"; do
   fi
 done
 
+PRIVATE_BUCKET="${S3_PRIVATE_BUCKET:-private-user-files}"
+
 echo "Waiting for RustFS S3 API..."
 for _ in {1..60}; do
   if docker run --rm \
@@ -91,6 +93,24 @@ if ! docker run --rm \
       --endpoint-url "$S3_ENDPOINT"
 fi
 
+if ! docker run --rm \
+  --network "${RUSTFS_NETWORK:-rustfs_internal}" \
+  -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
+  -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
+  -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
+  amazon/aws-cli s3api head-bucket \
+    --bucket "$PRIVATE_BUCKET" \
+    --endpoint-url "$S3_ENDPOINT" >/dev/null 2>&1; then
+  echo "Creating RustFS private bucket: $PRIVATE_BUCKET"
+  docker run --rm \
+    --network "${RUSTFS_NETWORK:-rustfs_internal}" \
+    -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
+    -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
+    -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
+    amazon/aws-cli s3 mb "s3://$PRIVATE_BUCKET" \
+      --endpoint-url "$S3_ENDPOINT"
+fi
+
 docker run --rm \
   --network "${RUSTFS_NETWORK:-rustfs_internal}" \
   --entrypoint sh \
@@ -128,6 +148,17 @@ docker run --rm \
     --bucket "$S3_BUCKET" \
     --cors-configuration file:///tmp/cors.json \
     --endpoint-url "$S3_ENDPOINT"
+
+docker run --rm \
+  --network "${RUSTFS_NETWORK:-rustfs_internal}" \
+  -v "$cors_file:/tmp/cors.json:ro" \
+  -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
+  -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
+  -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
+  amazon/aws-cli s3api put-bucket-cors \
+    --bucket "$PRIVATE_BUCKET" \
+    --cors-configuration file:///tmp/cors.json \
+    --endpoint-url "$S3_ENDPOINT"
 rm -f "$cors_file"
 
-echo "RustFS bucket is ready: $S3_BUCKET"
+echo "RustFS buckets are ready: $S3_BUCKET, $PRIVATE_BUCKET"
