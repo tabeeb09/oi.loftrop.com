@@ -80,12 +80,36 @@ EOF
   echo "Saved bootstrap credentials to $BOOTSTRAP_ENV_FILE"
 }
 
+seed_bootstrap_from_website_state() {
+  local website_bootstrap="/etc/website/openbao-bootstrap.env"
+  local website_deploy="/etc/website/deploy.env"
+
+  if [[ -f "$website_bootstrap" ]]; then
+    cp "$website_bootstrap" "$BOOTSTRAP_ENV_FILE"
+    chmod 600 "$BOOTSTRAP_ENV_FILE"
+    return 0
+  fi
+
+  if [[ -f "$website_deploy" ]]; then
+    # shellcheck disable=SC1090
+    source "$website_deploy"
+
+    if [[ -n "${BAO_ADDR:-}" && -n "${OPENBAO_ROLE_ID:-}" && -n "${OPENBAO_SECRET_ID:-}" ]]; then
+      write_secure_file "$BOOTSTRAP_ENV_FILE" <<EOF
+BAO_ADDR=$BAO_ADDR
+OPENBAO_ROLE_ID=$OPENBAO_ROLE_ID
+OPENBAO_SECRET_ID=$OPENBAO_SECRET_ID
+EOF
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 load_bootstrap_env() {
   if [[ ! -f "$BOOTSTRAP_ENV_FILE" ]]; then
-    if [[ -f "/etc/website/openbao-bootstrap.env" ]]; then
-      cp /etc/website/openbao-bootstrap.env "$BOOTSTRAP_ENV_FILE"
-      chmod 600 "$BOOTSTRAP_ENV_FILE"
-    fi
+    seed_bootstrap_from_website_state || true
   fi
 
   if [[ ! -f "$BOOTSTRAP_ENV_FILE" ]]; then
