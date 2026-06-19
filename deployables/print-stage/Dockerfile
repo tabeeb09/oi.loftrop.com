@@ -11,7 +11,6 @@ RUN apt-get update \
     file \
     libglib2.0-0 \
     libgtk-3-0 \
-    libwebkit2gtk-4.0-37 \
     libwebkit2gtk-4.1-0 \
     libgl1 \
     libglu1-mesa \
