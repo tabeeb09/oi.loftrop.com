@@ -111,15 +111,30 @@ export default function FileManager() {
     return fileFilamentEdits[file.id] ?? file.filamentSelection ?? "";
   }
 
+  async function verifyFilamentForFile(fileId) {
+    const response = await fetch(`/api/files/${encodeURIComponent(fileId)}/verify-filament`, {
+      method: "POST",
+    });
+    const payload = await response.json();
+
+    if (!response.ok || !payload.file) {
+      throw new Error(payload.error || "Failed to verify filament metadata.");
+    }
+
+    setFiles((current) => current.map((file) => (file.id === fileId ? payload.file : file)));
+    return payload.file;
+  }
+
   async function handleUpload() {
     const file = fileInputRef.current?.files?.[0] ?? selectedFile;
+    const filamentSelection = selectedFilament;
 
     if (!file) {
       setError("Choose a file before uploading.");
       return;
     }
 
-    if (!selectedFilament) {
+    if (!filamentSelection) {
       setError("Select a filament before uploading.");
       return;
     }
@@ -147,7 +162,7 @@ export default function FileManager() {
           filename: file.name,
           mimeType: file.type || undefined,
           sizeBytes: file.size,
-          filamentSelection: selectedFilament,
+          filamentSelection,
         }),
       });
       const payload = await response.json();
@@ -170,6 +185,18 @@ export default function FileManager() {
 
       if (!uploadResponse.ok) {
         throw new Error(`Upload failed (${uploadResponse.status}).`);
+      }
+
+      if (filamentSelection === FILAMENT_EXTRACT_VALUE && payload.file?.id) {
+        try {
+          await verifyFilamentForFile(payload.file.id);
+        } catch (caught) {
+          setNotice(
+            caught instanceof Error
+              ? `File uploaded, but filament extraction failed: ${caught.message}`
+              : "File uploaded, but filament extraction failed.",
+          );
+        }
       }
 
       setSelectedFile(null);
@@ -295,18 +322,7 @@ export default function FileManager() {
     setNotice(null);
 
     try {
-      const response = await fetch(`/api/files/${encodeURIComponent(fileId)}/verify-filament`, {
-        method: "POST",
-      });
-      const payload = await response.json();
-
-      if (!response.ok || !payload.file) {
-        throw new Error(payload.error || "Failed to verify filament metadata.");
-      }
-
-      setFiles((current) =>
-        current.map((file) => (file.id === fileId ? payload.file : file)),
-      );
+      await verifyFilamentForFile(fileId);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Filament verification failed.");
     } finally {
