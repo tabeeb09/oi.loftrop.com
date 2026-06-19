@@ -1,3 +1,6 @@
+import crypto from "node:crypto";
+import path from "node:path";
+
 import {
   CopyObjectCommand,
   DeleteObjectCommand,
@@ -11,20 +14,18 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env, parseCsv } from "./env";
-import {
-  FILAMENT_EXTRACT_VALUE,
-  canExtractFilamentFromFile,
-  getPrintEligibility,
-  isExtractFilamentSelection,
-  isValidFilamentSelection,
-} from "./printPolicy";
 import { extractOrca3mfMetadataFromBuffer } from "./orca3mf";
+import { extractFirstPlateGcodeFrom3mfBuffer, inspect3mfPackageFromBuffer } from "./orca3mfPackage";
+import { sliceModelTo3mf } from "./orcaSlicer";
+import { getPrintEligibility, isSliceableModelFile, isValidFilamentSelection } from "./printPolicy";
 
 const DEFAULT_PAGE_SIZE = 25;
 const DOWNLOAD_URL_TTL_SECONDS = 60;
 const UPLOAD_URL_TTL_SECONDS = 300;
 const MANIFEST_FOLDER = "private/system/files/manifests";
 const PRINT_QUEUE_FOLDER = "private/system/print-queue";
+const SLICE_FOLDER = "private/system/files/slices";
+const GCODE_FOLDER = "private/system/files/gcode";
 
 function createS3Client() {
   return new S3Client({
@@ -72,6 +73,14 @@ function buildObjectKey(ownerSub, fileId, filename) {
 
 function buildManifestKey(fileId) {
   return `${MANIFEST_FOLDER}/${fileId}.json`;
+}
+
+function buildSliceObjectKey(ownerSub, fileId, filename) {
+  return `${SLICE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
+}
+
+function buildGcodeObjectKey(ownerSub, fileId, filename) {
+  return `${GCODE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
 }
 
 function buildPrintQueueObjectKey(ownerSub, fileId, filename) {
@@ -133,6 +142,10 @@ function assertAllowedFile(request) {
   if ((allowedMimeTypes.length || allowedExtensions.length) && !mimeAllowed && !extensionAllowed) {
     throw new Error("File type is not allowed.");
   }
+
+  if (extension === "gcode") {
+    throw new Error("Pre-sliced G-code uploads are not accepted.");
+  }
 }
 
 async function ensureBucketExists() {
@@ -149,6 +162,19 @@ async function writeManifest(manifest) {
       Key: buildManifestKey(manifest.id),
       Body: JSON.stringify(manifest),
       ContentType: "application/json",
+    }),
+  );
+}
+
+async function writeObjectBuffer(objectKey, body, contentType) {
+  await ensureBucketExists();
+  const client = createS3Client();
+  await client.send(
+    new PutObjectCommand({
+      Bucket: env.S3_PRIVATE_BUCKET,
+      Key: objectKey,
+      Body: body,
+      ContentType: contentType,
     }),
   );
 }
@@ -221,10 +247,17 @@ async function hydrateManifest(manifest) {
     printStartedAt: manifest.printStartedAt ?? null,
     printQueueObjectKey: manifest.printQueueObjectKey ?? null,
     filamentSelection: manifest.filamentSelection ?? null,
-    extractionStatus: manifest.extractionStatus ?? "not_requested",
+    extractionStatus: manifest.extractionStatus ?? "pending",
     extractedFilamentType: manifest.extractedFilamentType ?? null,
     extractedGrams: manifest.extractedGrams ?? null,
     extractionError: manifest.extractionError ?? null,
+    sliceStatus: manifest.sliceStatus ?? "pending",
+    slicedObjectKey: manifest.slicedObjectKey ?? null,
+    slicedFilename: manifest.slicedFilename ?? null,
+    sliceError: manifest.sliceError ?? null,
+    slicedAt: manifest.slicedAt ?? null,
+    gcodeObjectKey: manifest.gcodeObjectKey ?? null,
+    gcodeFilename: manifest.gcodeFilename ?? null,
   };
 
   if (
@@ -323,12 +356,137 @@ async function deleteQueueCopyIfPresent(manifest) {
   } catch {}
 }
 
+async function deleteSliceCopyIfPresent(manifest) {
+  if (!manifest?.slicedObjectKey) {
+    return;
+  }
+
+  const client = createS3Client();
+
+  try {
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: env.S3_PRIVATE_BUCKET,
+        Key: manifest.slicedObjectKey,
+      }),
+    );
+  } catch {}
+}
+
+async function deleteGcodeCopyIfPresent(manifest) {
+  if (!manifest?.gcodeObjectKey) {
+    return;
+  }
+
+  const client = createS3Client();
+
+  try {
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: env.S3_PRIVATE_BUCKET,
+        Key: manifest.gcodeObjectKey,
+      }),
+    );
+  } catch {}
+}
+
 async function computeUsedBytes(ownerSub) {
   const allManifests = await readAllManifests();
 
   return allManifests
     .filter((manifest) => manifest.ownerSub === ownerSub)
     .reduce((total, manifest) => total + (typeof manifest.sizeBytes === "number" ? manifest.sizeBytes : 0), 0);
+}
+
+async function processFileForPrinting(manifest) {
+  if (!manifest?.filamentSelection) {
+    throw new Error("A filament selection is required before backend slicing.");
+  }
+
+  if (!isSliceableModelFile(manifest)) {
+    const failed = {
+      ...manifest,
+      extractionStatus: "failed",
+      extractionError: "Only unsliced model files or unsliced Orca project files are accepted.",
+      sliceStatus: "failed",
+      sliceError: "Only unsliced model files or unsliced Orca project files are accepted.",
+      updatedAt: new Date().toISOString(),
+    };
+    await writeManifest(failed);
+    return hydrateManifest(failed);
+  }
+
+  const sourceBuffer = await readObjectBuffer(manifest.objectKey);
+
+  if (getFileExtension(manifest.originalFilename) === "3mf") {
+    const inspected = await inspect3mfPackageFromBuffer(sourceBuffer, manifest.originalFilename);
+
+    if (inspected.kind === "sliced") {
+      const failed = {
+        ...manifest,
+        extractionStatus: "failed",
+        extractionError: "Pre-sliced 3MF files are not accepted. Upload a model or an unsliced Orca project file.",
+        sliceStatus: "failed",
+        sliceError: "Pre-sliced 3MF files are not accepted. Upload a model or an unsliced Orca project file.",
+        updatedAt: new Date().toISOString(),
+      };
+      await writeManifest(failed);
+      return hydrateManifest(failed);
+    }
+  }
+
+  try {
+    const sliced = await sliceModelTo3mf({
+      buffer: sourceBuffer,
+      originalFilename: manifest.originalFilename,
+      filamentSelection: manifest.filamentSelection,
+    });
+
+    await deleteSliceCopyIfPresent(manifest);
+    await deleteGcodeCopyIfPresent(manifest);
+
+    const slicedObjectKey = buildSliceObjectKey(manifest.ownerSub, manifest.id, sliced.outputFilename);
+    await writeObjectBuffer(
+      slicedObjectKey,
+      sliced.outputBuffer,
+      "application/vnd.ms-package.3dmanufacturing-3dmodel+xml",
+    );
+
+    const extracted = await extractOrca3mfMetadataFromBuffer(sliced.outputBuffer, sliced.outputFilename);
+    const gcode = await extractFirstPlateGcodeFrom3mfBuffer(sliced.outputBuffer, sliced.outputFilename);
+    const gcodeFilename = `${path.parse(manifest.originalFilename).name}.gcode`;
+    const gcodeObjectKey = buildGcodeObjectKey(manifest.ownerSub, manifest.id, gcodeFilename);
+    await writeObjectBuffer(gcodeObjectKey, gcode.gcodeBuffer, "text/plain");
+
+    const updated = {
+      ...manifest,
+      ...extracted,
+      extractionStatus: extracted.extractionStatus === "verified" ? "verified" : "failed",
+      extractedFilamentType: extracted.extractedFilamentType ?? manifest.filamentSelection,
+      slicedObjectKey,
+      slicedFilename: sliced.outputFilename,
+      gcodeObjectKey,
+      gcodeFilename,
+      sliceStatus: "sliced",
+      sliceError: null,
+      slicedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await writeManifest(updated);
+    return hydrateManifest(updated);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Automatic slicing failed.";
+    const failed = {
+      ...manifest,
+      extractionStatus: "failed",
+      extractionError: message,
+      sliceStatus: "failed",
+      sliceError: message,
+      updatedAt: new Date().toISOString(),
+    };
+    await writeManifest(failed);
+    return hydrateManifest(failed);
+  }
 }
 
 export async function createUploadUrl(actor, request) {
@@ -369,12 +527,17 @@ export async function createUploadUrl(actor, request) {
     printStartedAt: null,
     printQueueObjectKey: null,
     filamentSelection: request.filamentSelection,
-    extractionStatus: isExtractFilamentSelection(request.filamentSelection)
-      ? "pending"
-      : "not_requested",
+    extractionStatus: "pending",
     extractedFilamentType: null,
     extractedGrams: null,
     extractionError: null,
+    sliceStatus: isSliceableModelFile({ originalFilename: request.filename }) ? "pending" : "not_required",
+    slicedObjectKey: null,
+    slicedFilename: null,
+    sliceError: null,
+    slicedAt: null,
+    gcodeObjectKey: null,
+    gcodeFilename: null,
   };
 
   await writeManifest(manifest);
@@ -471,6 +634,8 @@ export async function deleteFile(actor, fileId) {
     throw new Error("Cannot delete a file that is in the print queue.");
   }
 
+  await deleteSliceCopyIfPresent(manifest);
+  await deleteGcodeCopyIfPresent(manifest);
   const client = createS3Client();
   await client.send(
     new DeleteObjectCommand({
@@ -506,13 +671,20 @@ export async function updateFileMetadata(actor, fileId, updates) {
       throw new Error("A valid filament selection is required.");
     }
 
+    await deleteSliceCopyIfPresent(next);
+    await deleteGcodeCopyIfPresent(next);
     next.filamentSelection = updates.filamentSelection;
-    next.extractionStatus = isExtractFilamentSelection(updates.filamentSelection)
-      ? "pending"
-      : "not_requested";
+    next.extractionStatus = "pending";
     next.extractedFilamentType = null;
     next.extractedGrams = null;
     next.extractionError = null;
+    next.sliceStatus = isSliceableModelFile(next) ? "pending" : "not_required";
+    next.slicedObjectKey = null;
+    next.slicedFilename = null;
+    next.sliceError = null;
+    next.slicedAt = null;
+    next.gcodeObjectKey = null;
+    next.gcodeFilename = null;
   }
 
   next.updatedAt = new Date().toISOString();
@@ -531,35 +703,7 @@ export async function verifyFileFilamentMetadata(actor, fileId) {
     throw new Error("Forbidden");
   }
 
-  if (!isExtractFilamentSelection(manifest.filamentSelection)) {
-    return hydrateManifest({
-      ...manifest,
-      extractionStatus: "not_requested",
-      extractionError: null,
-    });
-  }
-
-  if (!canExtractFilamentFromFile(manifest)) {
-    const failed = {
-      ...manifest,
-      extractionStatus: "failed",
-      extractionError: "Filament extraction is only supported for 3MF files.",
-      updatedAt: new Date().toISOString(),
-    };
-    await writeManifest(failed);
-    return hydrateManifest(failed);
-  }
-
-  const objectBuffer = await readObjectBuffer(manifest.objectKey);
-  const extracted = await extractOrca3mfMetadataFromBuffer(objectBuffer, manifest.originalFilename);
-  const updated = {
-    ...manifest,
-    ...extracted,
-    updatedAt: new Date().toISOString(),
-  };
-
-  await writeManifest(updated);
-  return hydrateManifest(updated);
+  return processFileForPrinting(manifest);
 }
 
 export async function requestPrint(actor, fileId) {
@@ -579,9 +723,7 @@ export async function requestPrint(actor, fileId) {
     throw new Error("File is already queued for printing.");
   }
 
-  if (isExtractFilamentSelection(manifest.filamentSelection)) {
-    manifest = await verifyFileFilamentMetadata(actor, fileId);
-  }
+  manifest = await verifyFileFilamentMetadata(actor, fileId);
 
   const printEligibility = getPrintEligibility(manifest);
 
@@ -592,13 +734,14 @@ export async function requestPrint(actor, fileId) {
   const queueObjectKey = buildPrintQueueObjectKey(
     manifest.ownerSub,
     manifest.id,
-    manifest.originalFilename,
+    manifest.gcodeFilename ?? `${path.parse(manifest.originalFilename).name}.gcode`,
   );
+  const sourceObjectKey = manifest.gcodeObjectKey;
   const client = createS3Client();
   await client.send(
     new CopyObjectCommand({
       Bucket: env.S3_PRIVATE_BUCKET,
-      CopySource: `${env.S3_PRIVATE_BUCKET}/${manifest.objectKey}`,
+      CopySource: `${env.S3_PRIVATE_BUCKET}/${sourceObjectKey}`,
       Key: queueObjectKey,
     }),
   );

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  FILAMENT_EXTRACT_VALUE,
   FILAMENT_OPTIONS,
   getEffectiveFilamentLabel,
   getPrintEligibility,
@@ -187,14 +186,14 @@ export default function FileManager() {
         throw new Error(`Upload failed (${uploadResponse.status}).`);
       }
 
-      if (filamentSelection === FILAMENT_EXTRACT_VALUE && payload.file?.id) {
+      if (payload.file?.id) {
         try {
           await verifyFilamentForFile(payload.file.id);
         } catch (caught) {
           setNotice(
             caught instanceof Error
-              ? `File uploaded, but filament extraction failed: ${caught.message}`
-              : "File uploaded, but filament extraction failed.",
+              ? `File uploaded, but backend processing failed: ${caught.message}`
+              : "File uploaded, but backend processing failed.",
           );
         }
       }
@@ -293,6 +292,7 @@ export default function FileManager() {
   async function handleFilamentChange(fileId, filamentSelection) {
     setError(null);
     setNotice(null);
+    setVerifyingId(fileId);
     setFileFilamentEdits((current) => ({ ...current, [fileId]: filamentSelection }));
 
     try {
@@ -311,8 +311,19 @@ export default function FileManager() {
         current.map((file) => (file.id === fileId ? payload.file : file)),
       );
       setFileFilamentEdits((current) => ({ ...current, [fileId]: payload.file.filamentSelection || "" }));
+      try {
+        await verifyFilamentForFile(fileId);
+      } catch (caught) {
+        setNotice(
+          caught instanceof Error
+            ? `Filament updated, but backend processing failed: ${caught.message}`
+            : "Filament updated, but backend processing failed.",
+        );
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Failed to update filament.");
+    } finally {
+      setVerifyingId(null);
     }
   }
 
@@ -415,9 +426,7 @@ export default function FileManager() {
                 const effectiveSelection = getPendingFilamentValue(file);
                 const fileWithPendingSelection = { ...file, filamentSelection: effectiveSelection };
                 const printEligibility = getPrintEligibility(fileWithPendingSelection);
-                const needsExtractionCheck =
-                  effectiveSelection === FILAMENT_EXTRACT_VALUE &&
-                  file.extractionStatus !== "verified";
+                const needsProcessingCheck = file.extractionStatus !== "verified";
 
                 return (
                 <tr key={file.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
@@ -436,9 +445,9 @@ export default function FileManager() {
                         ))}
                       </select>
                       <small style={{ color: "#555" }}>{getEffectiveFilamentLabel(fileWithPendingSelection)}</small>
-                      {file.extractionStatus === "verified" && file.extractedGrams ? (
+                      {file.extractionStatus === "verified" && typeof file.extractedGrams === "number" ? (
                         <small style={{ color: "#555" }}>
-                          Extracted mass: {file.extractedGrams.toFixed(2)} g
+                          Filament mass: {file.extractedGrams.toFixed(2)} g
                         </small>
                       ) : null}
                       {file.extractionStatus === "failed" && file.extractionError ? (
@@ -472,13 +481,13 @@ export default function FileManager() {
                     </button>
                     {file.printStatus === "idle" || !file.printStatus ? (
                       <>
-                        {needsExtractionCheck ? (
+                        {needsProcessingCheck ? (
                           <button
                             type="button"
                             onClick={() => handleVerifyFilament(file.id)}
                             disabled={verifyingId === file.id}
                           >
-                            {verifyingId === file.id ? "Checking..." : "Verify metadata"}
+                            {verifyingId === file.id ? "Processing..." : "Process file"}
                           </button>
                         ) : null}
                         <button

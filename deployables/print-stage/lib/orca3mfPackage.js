@@ -8,8 +8,8 @@ import { getPythonCommand } from "./pythonRuntime.js";
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT_CANDIDATES = [
-  path.resolve(currentDir, "..", "orca_3mf_filament_report.py"),
-  path.resolve(currentDir, "..", "..", "orca_3mf_filament_report.py"),
+  path.resolve(currentDir, "..", "orca_3mf_package_tools.py"),
+  path.resolve(currentDir, "..", "..", "orca_3mf_package_tools.py"),
 ];
 
 function getScriptPath() {
@@ -52,31 +52,33 @@ function runPython(args) {
   });
 }
 
-export async function extractOrca3mfMetadataFromBuffer(buffer, originalFilename) {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "orca-3mf-"));
+export async function inspect3mfPackageFromBuffer(buffer, originalFilename) {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "orca-3mf-inspect-"));
   const tempFile = path.join(tempDir, originalFilename || "upload.3mf");
 
   try {
     await fs.writeFile(tempFile, buffer);
-    const raw = await runPython([getScriptPath(), tempFile, "--json"]);
-    const parsed = JSON.parse(raw);
-    const extractedType =
-      parsed?.slice_info_stats?.filament_type ||
-      parsed?.slice_info_stats?.filaments?.find?.((entry) => entry?.type)?.type ||
-      null;
-    const grams =
-      parsed?.manual_gcode_analysis?.total_grams ??
-      parsed?.slice_info_stats?.used_g ??
-      parsed?.embedded_gcode_stats?.grams_from_volume ??
-      parsed?.embedded_gcode_stats?.grams_from_length ??
-      null;
+    const raw = await runPython([getScriptPath(), "inspect", tempFile]);
+    return JSON.parse(raw);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+}
 
+export async function extractFirstPlateGcodeFrom3mfBuffer(buffer, originalFilename) {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "orca-3mf-gcode-"));
+  const tempFile = path.join(tempDir, originalFilename || "output.3mf");
+  const outputFile = path.join(tempDir, "plate_1.gcode");
+
+  try {
+    await fs.writeFile(tempFile, buffer);
+    const raw = await runPython([getScriptPath(), "extract-gcode", tempFile, outputFile]);
+    const parsed = JSON.parse(raw);
+    const gcodeBuffer = await fs.readFile(outputFile);
     return {
-      extractionStatus: extractedType ? "verified" : "failed",
-      extractedFilamentType: extractedType,
-      extractedGrams: typeof grams === "number" ? grams : null,
-      extractionReport: parsed,
-      extractionError: extractedType ? null : "No filament type could be extracted from the file.",
+      ...parsed,
+      gcodeBuffer,
+      outputFilename: path.basename(outputFile),
     };
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });

@@ -11,7 +11,6 @@ export const FILAMENT_OPTIONS = [
   { value: "TPU", label: "TPU" },
   { value: "PA", label: "PA / Nylon" },
   { value: "PC", label: "PC" },
-  { value: FILAMENT_EXTRACT_VALUE, label: "Extract from file (advanced)" },
 ];
 
 const FILAMENT_OPTION_VALUES = new Set(FILAMENT_OPTIONS.map((option) => option.value));
@@ -25,7 +24,7 @@ export function isExtractFilamentSelection(value) {
 }
 
 export function getAllowed3dExtensions() {
-  return ["3mf", "stl", "obj", "step", "stp", "iges", "igs", "ply", "amf", "gcode"];
+  return ["3mf", "stl", "obj", "step", "stp", "iges", "igs", "ply", "amf"];
 }
 
 export function getFileExtension(filename) {
@@ -37,14 +36,13 @@ export function canExtractFilamentFromFile(file) {
   return getFileExtension(file?.originalFilename) === "3mf";
 }
 
-export function getEffectiveFilamentLabel(file) {
-  if (file?.filamentSelection === FILAMENT_EXTRACT_VALUE) {
-    return file?.extractedFilamentType
-      ? `${file.extractedFilamentType} (extracted)`
-      : "Extract from file";
-  }
+export function isSliceableModelFile(file) {
+  return getAllowed3dExtensions().includes(getFileExtension(file?.originalFilename)) &&
+    getFileExtension(file?.originalFilename) !== "gcode";
+}
 
-  return file?.filamentSelection || "Not selected";
+export function getEffectiveFilamentLabel(file) {
+  return file?.extractedFilamentType || file?.filamentSelection || "Not selected";
 }
 
 export function getPrintEligibility(file) {
@@ -55,25 +53,32 @@ export function getPrintEligibility(file) {
     };
   }
 
-  if (isExtractFilamentSelection(file.filamentSelection)) {
-    if (!canExtractFilamentFromFile(file)) {
+  if (file?.extractionStatus === "failed") {
+    return {
+      canPrint: false,
+      reason: file?.extractionError || "Backend processing failed for this file.",
+    };
+  }
+
+  if (file?.extractionStatus !== "verified" || !file?.extractedFilamentType) {
+    return {
+      canPrint: false,
+      reason: "Backend slicing has not completed yet.",
+    };
+  }
+
+  if (!isExtractFilamentSelection(file?.filamentSelection) && isSliceableModelFile(file)) {
+    if (file?.sliceStatus === "failed") {
       return {
         canPrint: false,
-        reason: "Filament extraction is only supported for 3MF files.",
+        reason: file?.sliceError || "Automatic slicing failed for this file.",
       };
     }
 
-    if (file?.extractionStatus === "failed") {
+    if (file?.sliceStatus !== "sliced" || !file?.slicedObjectKey) {
       return {
         canPrint: false,
-        reason: file?.extractionError || "Filament extraction failed for this file.",
-      };
-    }
-
-    if (file?.extractionStatus !== "verified" || !file?.extractedFilamentType) {
-      return {
-        canPrint: false,
-        reason: "Run backend filament extraction before printing this file.",
+        reason: "Automatic slicing has not completed yet.",
       };
     }
   }

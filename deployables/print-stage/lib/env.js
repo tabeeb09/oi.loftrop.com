@@ -1,4 +1,7 @@
 import { z } from "zod";
+import os from "node:os";
+
+const isWindows = os.platform() === "win32";
 
 const optionalNonEmptyString = z.preprocess(
   (value) => (value === "" ? undefined : value),
@@ -33,7 +36,35 @@ const envSchema = z.object({
   FILE_ALLOWED_MIME_TYPES: z.string().default(""),
   FILE_ALLOWED_EXTENSIONS: z
     .string()
-    .default("3mf,stl,obj,step,stp,iges,igs,ply,amf,gcode"),
+    .default("3mf,stl,obj,step,stp,iges,igs,ply,amf"),
+  ORCA_SLICER_BIN: z
+    .string()
+    .default(
+      isWindows
+        ? "C:\\Program Files\\OrcaSlicer\\orca-slicer.exe"
+        : "/opt/orca-slicer/squashfs-root/bin/orca-slicer",
+    ),
+  ORCA_MACHINE_PROFILE: z
+    .string()
+    .default(
+      isWindows
+        ? "C:\\Users\\This PC\\AppData\\Roaming\\OrcaSlicer\\system\\BBL\\machine\\Bambu Lab X1 Carbon 0.4 nozzle.json"
+        : "/opt/orca-profiles/BBL/machine/Bambu Lab X1 Carbon 0.4 nozzle.json",
+    ),
+  ORCA_PROCESS_PROFILE: z
+    .string()
+    .default(
+      isWindows
+        ? "C:\\Users\\This PC\\AppData\\Roaming\\OrcaSlicer\\system\\BBL\\process\\0.20mm Standard @BBL X1C.json"
+        : "/opt/orca-profiles/BBL/process/0.20mm Standard @BBL X1C.json",
+    ),
+  ORCA_FILAMENT_PROFILE_DIR: z
+    .string()
+    .default(
+      isWindows
+        ? "C:\\Users\\This PC\\AppData\\Roaming\\OrcaSlicer\\system\\BBL\\filament"
+        : "/opt/orca-profiles/BBL/filament",
+    ),
 });
 
 export const env = envSchema.parse(process.env);
