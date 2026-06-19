@@ -24,6 +24,7 @@ const envSchema = z.object({
     .default("file_upload_limit_bytes,fileUploadLimitBytes"),
   SUPERADMIN_EMAILS: z.string().default("tabeebrahman.logistics@gmail.com"),
   S3_ENDPOINT: optionalUrl,
+  S3_PUBLIC_ENDPOINT: optionalUrl,
   S3_PRIVATE_BUCKET: optionalNonEmptyString,
   S3_REGION: z.string().default("us-east-1"),
   S3_ACCESS_KEY_ID: optionalNonEmptyString,

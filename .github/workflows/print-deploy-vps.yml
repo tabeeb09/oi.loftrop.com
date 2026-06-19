@@ -39,7 +39,10 @@ jobs:
         shell: bash
         run: |
           cd "${PRINT_DEPLOY_PATH}"
-          sudo docker compose -p print -f docker-compose.print.yaml up -d --build
+          sudo docker compose -p print \
+            -f docker-compose.print.yaml \
+            -f docker-compose.print.same-host-rustfs.yaml \
+            up -d --build
 
       - name: Verify print site responds
         shell: bash

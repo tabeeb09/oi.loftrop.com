@@ -66,6 +66,16 @@ function buildPrintQueueObjectKey(ownerSub, fileId, filename) {
   return `${PRINT_QUEUE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
 }
 
+function toClientAccessibleUrl(url) {
+  if (!env.S3_PUBLIC_ENDPOINT) {
+    return url;
+  }
+
+  const source = new URL(url);
+  const targetBase = new URL(env.S3_PUBLIC_ENDPOINT);
+  return new URL(`${source.pathname}${source.search}`, targetBase).toString();
+}
+
 function decodeCursor(cursor) {
   if (!cursor) {
     return 0;
@@ -380,7 +390,7 @@ export async function createUploadUrl(actor, request) {
 
   return {
     file: manifest,
-    uploadUrl,
+    uploadUrl: toClientAccessibleUrl(uploadUrl),
     uploadMethod: "PUT",
     uploadHeaders: request.mimeType ? { "Content-Type": request.mimeType } : {},
   };
@@ -439,7 +449,7 @@ export async function createDownloadUrl(actor, fileId) {
 
   return {
     file: hydrated,
-    downloadUrl,
+    downloadUrl: toClientAccessibleUrl(downloadUrl),
     expiresInSeconds: DOWNLOAD_URL_TTL_SECONDS,
   };
 }
