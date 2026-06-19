@@ -1,0 +1,16 @@
+services:
+  website:
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - /etc/print/deploy.env
+    networks:
+      default:
+      app_edge:
+        aliases:
+          - print-web
+
+networks:
+  app_edge:
+    external: true

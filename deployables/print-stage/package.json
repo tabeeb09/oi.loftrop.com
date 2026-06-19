@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1057.0",
+    "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "jose": "^6.1.2",
+    "next": "latest",
+    "next-auth": "^4.24.13",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
