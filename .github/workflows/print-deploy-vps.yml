@@ -35,6 +35,12 @@ jobs:
             --exclude .env.local \
             "$GITHUB_WORKSPACE/deployables/print-stage/" "${PRINT_DEPLOY_PATH}/"
 
+      - name: Bootstrap print runtime env from OpenBao
+        shell: bash
+        run: |
+          sudo install -d -m 700 /etc/print
+          sudo bash "$GITHUB_WORKSPACE/scripts/bootstrap-print-vps.sh"
+
       - name: Build and restart print app
         shell: bash
         run: |
