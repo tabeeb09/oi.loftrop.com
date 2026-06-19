@@ -64,11 +64,16 @@ export async function extractOrca3mfMetadataFromBuffer(buffer, originalFilename)
       parsed?.slice_info_stats?.filament_type ||
       parsed?.slice_info_stats?.filaments?.find?.((entry) => entry?.type)?.type ||
       null;
+    const gramCandidates = [
+      parsed?.octoprint_analysis?.grams_from_volume,
+      parsed?.embedded_gcode_stats?.grams_from_volume,
+      parsed?.embedded_gcode_stats?.grams_from_length,
+      parsed?.manual_gcode_analysis?.total_grams,
+      parsed?.slice_info_stats?.used_g,
+    ];
     const grams =
-      parsed?.manual_gcode_analysis?.total_grams ??
-      parsed?.slice_info_stats?.used_g ??
-      parsed?.embedded_gcode_stats?.grams_from_volume ??
-      parsed?.embedded_gcode_stats?.grams_from_length ??
+      gramCandidates.find((value) => typeof value === "number" && Number.isFinite(value) && value > 0) ??
+      gramCandidates.find((value) => typeof value === "number" && Number.isFinite(value)) ??
       null;
 
     return {

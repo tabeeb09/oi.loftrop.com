@@ -112,6 +112,19 @@ function getPrintState(manifest) {
   return manifest.printStatus ?? "idle";
 }
 
+function hasGeneratedGcodeArtifact(manifest) {
+  return typeof manifest?.gcodeObjectKey === "string" &&
+    manifest.gcodeObjectKey.length > 0 &&
+    typeof manifest?.gcodeFilename === "string" &&
+    /\.gcode$/i.test(manifest.gcodeFilename);
+}
+
+function hasQueueArtifact(manifest) {
+  return typeof manifest?.printQueueObjectKey === "string" &&
+    manifest.printQueueObjectKey.length > 0 &&
+    /\.gcode$/i.test(manifest.printQueueObjectKey);
+}
+
 function assertAllowedFile(request) {
   const trimmedFilename = request.filename?.trim();
 
@@ -731,10 +744,14 @@ export async function requestPrint(actor, fileId) {
     throw new Error(printEligibility.reason);
   }
 
+  if (manifest.sliceStatus !== "sliced" || !hasGeneratedGcodeArtifact(manifest)) {
+    throw new Error("Only backend-sliced files with a generated G-code artifact can enter the print queue.");
+  }
+
   const queueObjectKey = buildPrintQueueObjectKey(
     manifest.ownerSub,
     manifest.id,
-    manifest.gcodeFilename ?? `${path.parse(manifest.originalFilename).name}.gcode`,
+    manifest.gcodeFilename,
   );
   const sourceObjectKey = manifest.gcodeObjectKey;
   const client = createS3Client();
@@ -804,7 +821,9 @@ export async function listPrintQueue(actor) {
   const queueFiles = manifests
     .filter((manifest) => {
       const printState = getPrintState(manifest);
-      return printState === "queued" || printState === "printing";
+      return (printState === "queued" || printState === "printing") &&
+        hasGeneratedGcodeArtifact(manifest) &&
+        hasQueueArtifact(manifest);
     })
     .sort((left, right) => {
       const leftPrinting = getPrintState(left) === "printing";
@@ -833,14 +852,22 @@ export async function markNextQueuedFileAsPrinting(actor) {
   }
 
   const manifests = await readAllManifests();
-  const currentPrinting = manifests.find((manifest) => getPrintState(manifest) === "printing");
+  const currentPrinting = manifests.find((manifest) =>
+    getPrintState(manifest) === "printing" &&
+    hasGeneratedGcodeArtifact(manifest) &&
+    hasQueueArtifact(manifest)
+  );
 
   if (currentPrinting) {
     return hydrateManifest(currentPrinting);
   }
 
   const nextQueued = manifests
-    .filter((manifest) => getPrintState(manifest) === "queued")
+    .filter((manifest) =>
+      getPrintState(manifest) === "queued" &&
+      hasGeneratedGcodeArtifact(manifest) &&
+      hasQueueArtifact(manifest)
+    )
     .sort(
       (left, right) =>
         new Date(left.printRequestedAt ?? left.createdAt).getTime() -

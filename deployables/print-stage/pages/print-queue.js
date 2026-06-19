@@ -1,4 +1,4 @@
-import Head from "next/head";
+﻿import Head from "next/head";
 import { getServerSession } from "next-auth/next";
 
 import SiteShell from "../components/SiteShell";
@@ -70,7 +70,8 @@ export default function PrintQueuePage({ files }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Filename</th>
+                <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Source file</th>
+                <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Queued artifact</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Filament</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Owner</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Size</th>
@@ -85,6 +86,7 @@ export default function PrintQueuePage({ files }) {
                 files.map((file) => (
                   <tr key={file.id} style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}>
                     <td style={{ padding: "0.65rem 0" }}>{file.originalFilename}</td>
+                    <td style={{ padding: "0.65rem 0" }}>{file.gcodeFilename ?? "—"}</td>
                     <td style={{ padding: "0.65rem 0" }}>
                       {file.extractedFilamentType ?? file.filamentSelection ?? "—"}
                     </td>
@@ -103,11 +105,11 @@ export default function PrintQueuePage({ files }) {
                   </tr>
                 ))
               ) : (
-              <tr>
-                <td colSpan={8} style={{ padding: "0.9rem 0", color: "#666" }}>
-                  No files are currently queued for printing.
-                </td>
-              </tr>
+                <tr>
+                  <td colSpan={9} style={{ padding: "0.9rem 0", color: "#666" }}>
+                    No files are currently queued for printing.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
