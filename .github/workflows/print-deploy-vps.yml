@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: print-deploy-vps
@@ -39,6 +40,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Request GitHub OIDC token
+        id: oidc
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/${{ github.repository_owner }}');
+            core.setSecret(token);
+            core.setOutput('token', token);
+
       - name: Sync print app to VPS workspace
         shell: bash
         run: |
@@ -52,12 +62,14 @@ jobs:
       - name: Bootstrap print runtime env from OpenBao
         shell: bash
         env:
+          BAO_JWT_TOKEN: ${{ steps.oidc.outputs.token }}
           PRINT_APP_BASE_URL: ${{ inputs.print_app_base_url }}
           PRINT_STRIPE_SECRET_KEY: ${{ inputs.stripe_secret_key }}
           PRINT_STRIPE_WEBHOOK_SECRET: ${{ inputs.stripe_webhook_secret }}
         run: |
           sudo install -d -m 700 /etc/print
-          sudo PRINT_APP_BASE_URL="${PRINT_APP_BASE_URL}" \
+          sudo BAO_JWT_TOKEN="${BAO_JWT_TOKEN}" \
+            PRINT_APP_BASE_URL="${PRINT_APP_BASE_URL}" \
             PRINT_STRIPE_SECRET_KEY="${PRINT_STRIPE_SECRET_KEY}" \
             PRINT_STRIPE_WEBHOOK_SECRET="${PRINT_STRIPE_WEBHOOK_SECRET}" \
             bash "$GITHUB_WORKSPACE/scripts/bootstrap-print-vps.sh"

@@ -110,7 +110,31 @@ EOF
   return 1
 }
 
+seed_bao_addr_from_website_state() {
+  local website_bootstrap="/etc/website/openbao-bootstrap.env"
+  local website_deploy="/etc/website/deploy.env"
+
+  if [[ -f "$website_bootstrap" ]]; then
+    # shellcheck disable=SC1090
+    source "$website_bootstrap"
+  elif [[ -f "$website_deploy" ]]; then
+    # shellcheck disable=SC1090
+    source "$website_deploy"
+  fi
+
+  if [[ -n "${BAO_ADDR:-}" ]]; then
+    export BAO_ADDR
+    return 0
+  fi
+
+  return 1
+}
+
 load_bootstrap_env() {
+  if [[ -n "${BAO_JWT_TOKEN:-}" || -n "${BAO_TOKEN:-}" || -n "${BAO_DEV_ROOT_TOKEN:-}" ]]; then
+    return
+  fi
+
   if [[ ! -f "$BOOTSTRAP_ENV_FILE" ]]; then
     seed_bootstrap_from_website_state || true
   fi
@@ -145,18 +169,35 @@ migrate_legacy_env_if_needed() {
 
 wait_for_valid_bootstrap() {
   while true; do
-    load_bootstrap_env
-    migrate_legacy_env_if_needed
+    local fetch_status=0
 
-    if BAO_ADDR="$BAO_ADDR" \
-      OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
-      OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
-      BAO_SECRET_GROUPS="${BAO_SECRET_GROUPS:-print}" \
-      run_node scripts/fetch-openbao-secrets.mjs --groups "${BAO_SECRET_GROUPS:-print}"; then
+    if [[ -n "${BAO_JWT_TOKEN:-}" || -n "${BAO_TOKEN:-}" || -n "${BAO_DEV_ROOT_TOKEN:-}" ]]; then
+      if [[ -z "${BAO_ADDR:-}" ]]; then
+        seed_bao_addr_from_website_state || true
+      fi
+      : "${BAO_ADDR:?Missing BAO_ADDR for token-based OpenBao bootstrap}"
+      migrate_legacy_env_if_needed || fetch_status=$?
+      if [[ "$fetch_status" -eq 0 ]]; then
+        BAO_SECRET_GROUPS="${BAO_SECRET_GROUPS:-print}" \
+          run_node scripts/fetch-openbao-secrets.mjs --groups "${BAO_SECRET_GROUPS:-print}" || fetch_status=$?
+      fi
+    else
+      load_bootstrap_env
+      migrate_legacy_env_if_needed || fetch_status=$?
+      if [[ "$fetch_status" -eq 0 ]]; then
+        BAO_ADDR="$BAO_ADDR" \
+          OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
+          OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
+          BAO_SECRET_GROUPS="${BAO_SECRET_GROUPS:-print}" \
+          run_node scripts/fetch-openbao-secrets.mjs --groups "${BAO_SECRET_GROUPS:-print}" || fetch_status=$?
+      fi
+    fi
+
+    if [[ "$fetch_status" -eq 0 ]]; then
       break
     fi
 
-    echo "OpenBao bootstrap credentials were rejected or print secret fetch failed."
+    echo "OpenBao bootstrap credentials or token were rejected, or print secret bootstrap failed."
 
     if [[ -t 0 ]]; then
       rm -f "$BOOTSTRAP_ENV_FILE"
