@@ -47,4 +47,15 @@ jobs:
       - name: Verify print site responds
         shell: bash
         run: |
-          curl -fsS https://print.loftrop.com >/dev/null
+          for attempt in $(seq 1 30); do
+            if curl -fsS https://print.loftrop.com >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "print.loftrop.com did not become healthy in time" >&2
+          sudo docker compose -p print \
+            -f "${PRINT_DEPLOY_PATH}/docker-compose.print.yaml" \
+            -f "${PRINT_DEPLOY_PATH}/docker-compose.print.same-host-rustfs.yaml" \
+            logs --tail 200 website >&2 || true
+          exit 1

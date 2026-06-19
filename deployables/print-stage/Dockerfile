@@ -13,6 +13,7 @@ RUN apt-get update \
     libgtk-3-0 \
     libwebkit2gtk-4.1-0 \
     libgl1 \
+    libglu1-mesa \
     libdbus-1-3 \
     libx11-6 \
     libxext6 \
