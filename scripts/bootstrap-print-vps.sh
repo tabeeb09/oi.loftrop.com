@@ -223,7 +223,7 @@ prepare_deploy_env() {
   fi
 
   run_node scripts/prepare-print-env.mjs \
-    --runtime "$TOOLS_ROOT/.env.runtime" \
+    --runtime ".env.runtime" \
     "${base_args[@]}" \
     --output "$DEPLOY_ENV_FILE"
 
