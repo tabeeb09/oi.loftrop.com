@@ -31,7 +31,7 @@ RUN apt-get update \
     libasound2 \
   && rm -rf /var/lib/apt/lists/*
 
-ARG ORCA_APPIMAGE_URL=https://github.com/OrcaSlicer/OrcaSlicer/releases/download/v2.3.0/OrcaSlicer_Linux_AppImage_V2.3.0.AppImage
+ARG ORCA_APPIMAGE_URL=https://github.com/OrcaSlicer/OrcaSlicer/releases/download/v2.3.2/OrcaSlicer_Linux_AppImage_V2.3.2.AppImage
 RUN mkdir -p /opt/orca-slicer \
   && curl -fsSL "$ORCA_APPIMAGE_URL" -o /opt/orca-slicer/OrcaSlicer.AppImage \
   && chmod +x /opt/orca-slicer/OrcaSlicer.AppImage \
