@@ -37,6 +37,12 @@ jobs:
     env:
       PRINT_DEPLOY_PATH: /srv/print/app
     steps:
+      - name: Repair workspace permissions
+        shell: bash
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
+          sudo rm -rf "$GITHUB_WORKSPACE/secrets" "$GITHUB_WORKSPACE/.env.runtime" || true
+
       - name: Check out repository
         uses: actions/checkout@v4
 
@@ -127,3 +133,10 @@ jobs:
             -f "${PRINT_DEPLOY_PATH}/docker-compose.print.same-host-rustfs.yaml" \
             logs --tail 200 website >&2 || true
           exit 1
+
+      - name: Clean bootstrap workspace artifacts
+        if: always()
+        shell: bash
+        run: |
+          sudo rm -rf "$GITHUB_WORKSPACE/secrets" "$GITHUB_WORKSPACE/.env.runtime" || true
+          sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE" || true
