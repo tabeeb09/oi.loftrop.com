@@ -36,12 +36,23 @@ export function computePrintPriceQuote(file) {
   const breakdown = Array.isArray(file?.extractedFilamentBreakdown)
     ? file.extractedFilamentBreakdown
     : [];
+  const fallbackType = normalizeFilamentType(file?.extractedFilamentType);
+  const fallbackGrams =
+    typeof file?.extractedGrams === "number" && Number.isFinite(file.extractedGrams)
+      ? file.extractedGrams
+      : null;
 
-  if (!breakdown.length) {
+  const effectiveBreakdown = breakdown.length
+    ? breakdown
+    : fallbackType && fallbackGrams !== null && fallbackGrams > 0
+      ? [{ filamentType: fallbackType, grams: fallbackGrams }]
+      : [];
+
+  if (!effectiveBreakdown.length) {
     return null;
   }
 
-  const normalizedBreakdown = breakdown
+  const normalizedBreakdown = effectiveBreakdown
     .map((entry) => {
       const rate = getFilamentRate(entry.filamentType);
       const grams = typeof entry.grams === "number" && Number.isFinite(entry.grams) ? entry.grams : null;
