@@ -877,7 +877,16 @@ export async function requestPrint(actor, fileId) {
     throw new Error("File is already queued for printing.");
   }
 
-  manifest = await verifyFileFilamentMetadata(actor, fileId);
+  const needsProcessing =
+    manifest.extractionStatus !== "verified" ||
+    manifest.sliceStatus !== "sliced" ||
+    !hasGeneratedGcodeArtifact(manifest);
+
+  if (needsProcessing) {
+    manifest = await verifyFileFilamentMetadata(actor, fileId);
+  } else {
+    manifest = await hydrateManifest(manifest);
+  }
 
   const printEligibility = getPrintEligibility(manifest);
 
