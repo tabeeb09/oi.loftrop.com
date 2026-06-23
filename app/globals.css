@@ -13,8 +13,8 @@
   --nav-width: 18rem;
   --collapsed-width: 3.35rem;
   --header-height: 58px;
-  --font-ui: var(--font-source-sans), "Source Sans 3", sans-serif;
-  --font-editorial: var(--font-source-serif), "Source Serif 4", Georgia, serif;
+  --font-ui: "Source Sans 3", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-editorial: "Source Serif 4", "Iowan Old Style", Georgia, serif;
 }
 
 * {
@@ -297,6 +297,11 @@ textarea {
 .story-card h2 a {
   color: var(--ink);
   text-decoration: none;
+}
+
+.lead-card.lead-card--image h2 a,
+.story-card.story-card--image h2 a {
+  color: #f8f4ea !important;
 }
 
 .lead-card p:not(.eyebrow),
