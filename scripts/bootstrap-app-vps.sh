@@ -49,6 +49,7 @@ run_node() {
     -e "BAO_SECRET_PATH_RUSTFS=${BAO_SECRET_PATH_RUSTFS:-}" \
     -e "BAO_SECRET_PATH_OAUTH2_PROXY=${BAO_SECRET_PATH_OAUTH2_PROXY:-}" \
     -e "BAO_SECRET_PATH_KEYCLOAK=${BAO_SECRET_PATH_KEYCLOAK:-}" \
+    -e "BAO_SECRET_PATH_SUPABASE=${BAO_SECRET_PATH_SUPABASE:-}" \
     -e "NODE_TLS_REJECT_UNAUTHORIZED=${NODE_TLS_REJECT_UNAUTHORIZED:-}" \
     node:20-alpine node "$@"
 }
@@ -96,14 +97,41 @@ load_bootstrap_env() {
   : "${OPENBAO_SECRET_ID:?Missing OPENBAO_SECRET_ID in $BOOTSTRAP_ENV_FILE}"
 }
 
+read_storage_provider() {
+  if [[ -f "$BASE_ENV_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$BASE_ENV_FILE"
+  fi
+
+  echo "${FILE_STORAGE_PROVIDER:-local}"
+}
+
+resolve_bootstrap_groups() {
+  local provider
+  provider="$(read_storage_provider)"
+
+  case "$provider" in
+    supabase)
+      echo "website,rustfs,keycloak,oauth2Proxy,supabase"
+      ;;
+    s3|local|*)
+      echo "website,rustfs,keycloak,oauth2Proxy"
+      ;;
+  esac
+}
+
 wait_for_valid_bootstrap() {
+  local bootstrap_groups
+  bootstrap_groups="$(resolve_bootstrap_groups)"
+
   while true; do
     load_bootstrap_env
 
     if BAO_ADDR="$BAO_ADDR" \
       OPENBAO_ROLE_ID="$OPENBAO_ROLE_ID" \
       OPENBAO_SECRET_ID="$OPENBAO_SECRET_ID" \
-      run_node scripts/fetch-openbao-secrets.mjs; then
+      BAO_SECRET_GROUPS="$bootstrap_groups" \
+      run_node scripts/fetch-openbao-secrets.mjs --groups "$bootstrap_groups"; then
       break
     fi
 
