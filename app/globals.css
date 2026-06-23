@@ -235,21 +235,21 @@ textarea {
   z-index: 1;
 }
 
-.lead-card--light,
-.story-card--light {
+.lead-card--dark,
+.story-card--dark {
   color: #f8f4ea;
 }
 
-.lead-card--light .eyebrow,
-.story-card--light .eyebrow {
+.lead-card--dark .eyebrow,
+.story-card--dark .eyebrow {
   color: #f3c48f;
 }
 
-.lead-card--light h2 a,
-.story-card--light h2 a,
-.lead-card--light p:not(.eyebrow),
-.story-card--light p,
-.lead-card--light .read-link {
+.lead-card--dark h2 a,
+.story-card--dark h2 a,
+.lead-card--dark p:not(.eyebrow),
+.story-card--dark p,
+.lead-card--dark .read-link {
   color: #f8f4ea;
 }
 

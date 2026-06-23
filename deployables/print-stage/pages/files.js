@@ -20,23 +20,23 @@ function formatBytes(value) {
 
 export default function FilesPage({ uploadLimitBytes }) {
   return (
-    <SiteShell title="3D Printer">
+    <SiteShell title="Print farm">
       <Head>
-        <title>My files | 3D Printer</title>
+        <title>Submit prints | Print farm</title>
       </Head>
 
       <div style={{ maxWidth: "72rem", margin: "0 auto" }}>
-        <h1>User files</h1>
+        <h1>Submit prints</h1>
         <p style={{ maxWidth: "50rem" }}>
-          Private uploads stay scoped to the authenticated Keycloak user. Download URLs are
-          short-lived and are generated only after server-side authorization. Files can also be
-          submitted into the print queue from here.
+          Upload a model, let the backend prepare the print package, review the material estimate,
+          then pay and release it into the print farm queue. Your files remain scoped to your
+          Keycloak account and download links stay short-lived.
         </p>
         <p style={{ maxWidth: "50rem", color: "#555" }}>
-          Storage provider: <strong>s3</strong>
+          Processing backend: <strong>RustFS + OrcaSlicer</strong>
         </p>
         <p style={{ maxWidth: "50rem", color: "#555" }}>
-          Upload limit for this account: <strong>{formatBytes(uploadLimitBytes)}</strong>
+          Account upload allowance: <strong>{formatBytes(uploadLimitBytes)}</strong>
         </p>
         <FileManager />
       </div>

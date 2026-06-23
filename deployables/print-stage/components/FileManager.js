@@ -448,13 +448,13 @@ export default function FileManager() {
   return (
     <div style={{ display: "grid", gap: "1.25rem" }}>
       <section className="panel">
-        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Upload file</h2>
+        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Upload model</h2>
         <p style={{ margin: 0, color: "#555" }}>
           Used: <strong>{formatBytes(queueSummary.usedBytes)}</strong> · Remaining: <strong>{formatBytes(queueSummary.remainingBytes)}</strong>
         </p>
         {!actorState.paymentsEnabled ? (
           <p style={{ margin: 0, color: "#8a6500" }}>
-            Payment checkout is not configured in this environment yet. Files can still be uploaded and processed.
+            Checkout is currently unavailable. Models can still be uploaded and prepared for later submission.
           </p>
         ) : null}
         <input
@@ -475,7 +475,8 @@ export default function FileManager() {
         </label>
         {selectedFilament === FILAMENT_EXTRACT_VALUE ? (
           <p style={{ margin: 0, color: "#555" }}>
-            Advanced mode expects an unsliced Orca project 3MF. The backend slices it using the embedded multicolour/material setup and calculates a per-filament grams breakdown.
+            Advanced mode expects an unsliced Orca project 3MF. The backend keeps the embedded
+            material mapping, slices it server-side, and calculates a per-filament breakdown.
           </p>
         ) : null}
         <p style={{ margin: 0, color: "#555" }}>{selectedSummary}</p>
@@ -494,7 +495,7 @@ export default function FileManager() {
 
       <section className="panel panelWide">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Your files</h2>
+          <h2 style={{ margin: 0, fontSize: "1.2rem" }}>Your print jobs</h2>
           <button type="button" onClick={() => loadFiles()} disabled={loading}>Reload</button>
         </div>
 
@@ -549,11 +550,11 @@ export default function FileManager() {
                         {file.paymentStatus === "paid" ? (
                           <small style={{ color: "#2d6a4f" }}>Payment received</small>
                         ) : !actorState.paymentsEnabled ? (
-                          <small style={{ color: "#8a6500" }}>Payment checkout not configured yet</small>
+                          <small style={{ color: "#8a6500" }}>Checkout is not configured yet</small>
                         ) : file.paymentStatus === "checkout_pending" ? (
-                          <small style={{ color: "#8a6500" }}>Checkout created, payment pending</small>
+                          <small style={{ color: "#8a6500" }}>Checkout started, payment still pending</small>
                         ) : (
-                          <small style={{ color: "#8a6500" }}>Payment required before queueing print</small>
+                          <small style={{ color: "#8a6500" }}>Payment required before joining the print queue</small>
                         )}
                         {file.extractionStatus === "failed" && file.extractionError ? (
                           <small style={{ color: "#a40000" }}>{file.extractionError}</small>
@@ -633,7 +634,7 @@ export default function FileManager() {
               })
             ) : (
               <tr>
-                <td colSpan={6} style={{ padding: "0.9rem 0", color: "#666" }}>No files uploaded yet.</td>
+                <td colSpan={6} style={{ padding: "0.9rem 0", color: "#666" }}>No print jobs uploaded yet.</td>
               </tr>
             )}
           </tbody>

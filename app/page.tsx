@@ -1,5 +1,6 @@
 import { papers } from "@/src/lib/papers";
 import { resourceUrl } from "@/src/lib/resource-schema";
+import StoryFeatureGrid from "@/components/StoryFeatureGrid";
 
 const bestGrades = [
   { module: "Scientific Presentation", grade: "100%" },
@@ -23,8 +24,8 @@ const leadStories = [
     title: papers.neuromorphic.title,
     summary:
       "A report on memristive devices, spiking neural networks, and neuromorphic approaches to efficient computation.",
-    heroResourceId: papers.neuromorphic.heroResourceId,
-    heroTone: "light" as const,
+    heroImageUrl: resourceUrl(papers.neuromorphic.heroResourceId),
+    heroTone: "auto" as const,
   },
   {
     href: "/hhg",
@@ -32,8 +33,15 @@ const leadStories = [
     title: papers.hhg.title,
     summary:
       "Experimental physics and data analysis notes from the ORBYTS programme, with the source report embedded.",
-    heroResourceId: papers.hhg.heroResourceId,
-    heroTone: "light" as const,
+    heroImageUrl: resourceUrl(papers.hhg.heroResourceId),
+    heroTone: "auto" as const,
+  },
+  {
+    href: "https://print.loftrop.com",
+    label: "Fabrication",
+    title: "Print farm",
+    summary:
+      "A backend-sliced print submission service for quoting, payment, queueing, and managed print execution.",
   },
   {
     href: "/reflectance",
@@ -52,13 +60,6 @@ const leadStories = [
 ];
 
 export default function Home() {
-  const leadStory = leadStories[0];
-  const leadStyle = leadStory.heroResourceId
-    ? ({
-        backgroundImage: `linear-gradient(rgba(15, 18, 23, 0.38), rgba(15, 18, 23, 0.64)), url(${resourceUrl(leadStory.heroResourceId)})`,
-      } as const)
-    : undefined;
-
   return (
     <div className="home-page editorial-page">
       <section className="home-masthead">
@@ -76,43 +77,7 @@ export default function Home() {
         </figure>
       </section>
 
-      <section className="home-grid" aria-label="Featured portfolio work">
-        <article
-          className={`lead-card ${leadStory.heroResourceId ? `lead-card--image lead-card--${leadStory.heroTone}` : ""}`}
-          style={leadStyle}
-        >
-          <p className="eyebrow">{leadStory.label}</p>
-          <h2>
-            <a href={leadStory.href}>{leadStory.title}</a>
-          </h2>
-          <p>{leadStory.summary}</p>
-          <a className="read-link" href={leadStory.href}>
-            Read report
-          </a>
-        </article>
-
-        <div className="story-stack">
-          {leadStories.slice(1).map((story) => (
-            <article
-              className={`story-card ${story.heroResourceId ? `story-card--image story-card--${story.heroTone}` : ""}`}
-              key={story.href}
-              style={
-                story.heroResourceId
-                  ? {
-                      backgroundImage: `linear-gradient(rgba(15, 18, 23, 0.38), rgba(15, 18, 23, 0.7)), url(${resourceUrl(story.heroResourceId)})`,
-                    }
-                  : undefined
-              }
-            >
-              <p className="eyebrow">{story.label}</p>
-              <h2>
-                <a href={story.href}>{story.title}</a>
-              </h2>
-              <p>{story.summary}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <StoryFeatureGrid stories={leadStories} />
 
       <section className="home-band">
         <div>
