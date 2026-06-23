@@ -304,6 +304,17 @@ textarea {
   color: #f8f4ea !important;
 }
 
+.lead-card.lead-card--image p:not(.eyebrow),
+.story-card.story-card--image p {
+  color: #f8f4ea !important;
+}
+
+.lead-card.lead-card--image p:not(.eyebrow),
+.story-card.story-card--image p {
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
 .lead-card p:not(.eyebrow),
 .story-card p,
 .home-columns p,
