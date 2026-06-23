@@ -2,6 +2,9 @@ import { papers } from "@/src/lib/papers";
 import { resourceUrl } from "@/src/lib/resource-schema";
 import StoryFeatureGrid from "@/components/StoryFeatureGrid";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const bestGrades = [
   { module: "Scientific Presentation", grade: "100%" },
   { module: "Climate Change Advanced Data Analysis", grade: "90%", href: "/climate_data_analysis" },
