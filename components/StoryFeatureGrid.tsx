@@ -75,7 +75,7 @@ export default function StoryFeatureGrid({ stories }: Props) {
       <StoryCard
         story={leadStory}
         className="lead-card"
-        readLinkLabel="Open project"
+        readLinkLabel="Research project"
       />
 
       <div className="story-stack">
