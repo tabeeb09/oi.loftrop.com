@@ -20,7 +20,6 @@ const requiredKeys = {
     "KEYCLOAK_CLIENT_SECRET",
   ],
   rustfs: [
-    "FILE_STORAGE_PROVIDER",
     "NEXT_PUBLIC_MEDIA_BASE_URL",
     "S3_ENDPOINT",
     "S3_PUBLIC_ENDPOINT",
