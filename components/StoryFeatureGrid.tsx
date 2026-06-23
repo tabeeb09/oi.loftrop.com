@@ -65,14 +65,14 @@ function StoryCard({
 }) {
   const imageUrl = story.heroImageUrl ?? null;
   const [tone, setTone] = useState<"light" | "dark">(
-    story.heroTone === "dark" ? "dark" : "light",
+    story.heroTone === "light" ? "light" : "dark",
   );
 
   useEffect(() => {
     let cancelled = false;
 
     if (!imageUrl || (story.heroTone && story.heroTone !== "auto")) {
-      setTone(story.heroTone === "dark" ? "dark" : "light");
+      setTone(story.heroTone === "light" ? "light" : "dark");
       return undefined;
     }
 
@@ -84,7 +84,7 @@ function StoryCard({
       })
       .catch(() => {
         if (!cancelled) {
-          setTone("light");
+          setTone("dark");
         }
       });
 
