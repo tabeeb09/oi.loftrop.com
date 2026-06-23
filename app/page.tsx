@@ -71,7 +71,7 @@ export default function Home() {
           <h1>Tabeeb Rahman</h1>
           <p className="home-deck">
             Software engineer, data scientist, physicist, and mathematician. This site presents
-            research artifacts as journal-style papers backed by a self-hosted media registry.
+            my work in a clear, organized format.
           </p>
         </div>
         <figure>
