@@ -47,7 +47,7 @@ export default function SiteShell({ children, title = "3D Printer" }) {
               <span className={styles.brandMark}>3D</span>
               <span className={styles.brandCopy}>
                 <strong>3D Printer</strong>
-                <small>Local shell</small>
+                <small>Print portal</small>
               </span>
             </Link>
           ) : null}
@@ -103,7 +103,7 @@ export default function SiteShell({ children, title = "3D Printer" }) {
       <main className={styles.main}>{children}</main>
 
       <footer className={styles.footer}>
-        <span>Local-only 3D printer project shell</span>
+        <span>3D printer project portal</span>
       </footer>
     </div>
   );
