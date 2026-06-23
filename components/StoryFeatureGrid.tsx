@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type Story = {
   href: string;
@@ -15,45 +15,6 @@ type Props = {
   stories: Story[];
 };
 
-function luminanceFromImageUrl(url: string) {
-  return new Promise<number>((resolve, reject) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        const width = 24;
-        const height = 24;
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d");
-
-        if (!context) {
-          reject(new Error("Canvas context unavailable."));
-          return;
-        }
-
-        context.drawImage(image, 0, 0, width, height);
-        const { data } = context.getImageData(0, 0, width, height);
-        let total = 0;
-
-        for (let index = 0; index < data.length; index += 4) {
-          const red = data[index] / 255;
-          const green = data[index + 1] / 255;
-          const blue = data[index + 2] / 255;
-          total += (0.2126 * red) + (0.7152 * green) + (0.0722 * blue);
-        }
-
-        resolve(total / (data.length / 4));
-      } catch (error) {
-        reject(error);
-      }
-    };
-    image.onerror = () => reject(new Error("Image load failed."));
-    image.src = url;
-  });
-}
-
 function StoryCard({
   story,
   className,
@@ -64,34 +25,6 @@ function StoryCard({
   readLinkLabel?: string;
 }) {
   const imageUrl = story.heroImageUrl ?? null;
-  const [tone, setTone] = useState<"light" | "dark">(
-    story.heroTone === "light" ? "light" : "dark",
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!imageUrl || (story.heroTone && story.heroTone !== "auto")) {
-      setTone(story.heroTone === "light" ? "light" : "dark");
-      return undefined;
-    }
-
-    void luminanceFromImageUrl(imageUrl)
-      .then((luminance) => {
-        if (!cancelled) {
-          setTone(luminance < 0.48 ? "dark" : "light");
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setTone("dark");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [imageUrl, story.heroTone]);
 
   const style = useMemo(
     () =>
@@ -103,6 +36,12 @@ function StoryCard({
         : undefined,
     [imageUrl],
   );
+
+  const tone = imageUrl
+    ? story.heroTone === "light"
+      ? "light"
+      : "dark"
+    : "light";
 
   return (
     <article

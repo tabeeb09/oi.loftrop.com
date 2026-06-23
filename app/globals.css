@@ -241,8 +241,19 @@ textarea {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
 }
 
+.lead-card--image,
+.story-card--image {
+  color: #f8f4ea;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.42);
+}
+
 .lead-card--dark .eyebrow,
 .story-card--dark .eyebrow {
+  color: #f3c48f;
+}
+
+.lead-card--image .eyebrow,
+.story-card--image .eyebrow {
   color: #f3c48f;
 }
 
@@ -251,6 +262,14 @@ textarea {
 .lead-card--dark p:not(.eyebrow),
 .story-card--dark p,
 .lead-card--dark .read-link {
+  color: #f8f4ea;
+}
+
+.lead-card--image h2 a,
+.story-card--image h2 a,
+.lead-card--image p:not(.eyebrow),
+.story-card--image p,
+.lead-card--image .read-link {
   color: #f8f4ea;
 }
 
