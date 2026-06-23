@@ -33,7 +33,7 @@ export default function FilesPage({ uploadLimitBytes }) {
           Keycloak account and download links stay short-lived.
         </p>
         <p style={{ maxWidth: "50rem", color: "#555" }}>
-          Processing backend: <strong>RustFS + OrcaSlicer</strong>
+          Processing service: <strong>Managed print pipeline</strong>
         </p>
         <p style={{ maxWidth: "50rem", color: "#555" }}>
           Account upload allowance: <strong>{formatBytes(uploadLimitBytes)}</strong>

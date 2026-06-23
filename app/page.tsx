@@ -14,10 +14,13 @@ const bestGrades = [
 ];
 
 const skills = [
-  ["Software", "Next.js, React, TypeScript, Docker, PostgreSQL"],
-  ["Data science", "Python, Pandas, SciPy, TensorFlow, PyTorch"],
-  ["Infrastructure", "GitHub Actions, OpenBao, Keycloak, RustFS, Caddy"],
-  ["Engineering", "Fusion 360, AutoCAD, MATLAB, parametric modelling"],
+  ["Web", "Next.js, React, TypeScript, NextAuth, Playwright"],
+  ["Backend", "Node.js, Python, Bash, PowerShell, REST APIs"],
+  ["Identity and security", "Keycloak, OpenBao, OAuth2 Proxy, OAuth/OIDC, Stripe"],
+  ["Storage", "RustFS, Supabase Storage, S3, AWS SDK, presigned URLs"],
+  ["Infrastructure", "Docker, Docker Compose, GitHub Actions, Terraform, Hetzner Cloud, Cloudflare DNS, Caddy"],
+  ["Data science", "Python, Pandas, SciPy, TensorFlow, PyTorch, MATLAB"],
+  ["Engineering", "Fusion 360, AutoCAD, OrcaSlicer, Bambu Lab X1 Carbon, 3MF/STL workflows"],
 ];
 
 const leadStories = [
