@@ -19,6 +19,18 @@ function createS3Client() {
   });
 }
 
+function createPublicS3Client() {
+  return new S3Client({
+    endpoint: env.S3_PUBLIC_ENDPOINT || env.S3_ENDPOINT,
+    region: env.S3_REGION,
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: env.S3_ACCESS_KEY_ID,
+      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", ["GET"]);
@@ -55,7 +67,7 @@ export default async function handler(req, res) {
     return res.status(404).json({ error: "No generated print artifact is available." });
   }
 
-  const client = createS3Client();
+  const client = createPublicS3Client();
   const downloadUrl = await getSignedUrl(
     client,
     new GetObjectCommand({
