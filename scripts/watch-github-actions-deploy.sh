@@ -13,7 +13,7 @@ Options:
   --sha <commit-sha>         Commit SHA to watch (default: HEAD)
   --branch <branch>          Branch name (default: current branch)
   --timeout-minutes <mins>   Timeout in minutes (default: 25)
-  --poll-seconds <secs>      Poll interval in seconds (default: 15)
+  --poll-seconds <secs>      Poll interval in seconds (default: 30)
   --skip-print               Do not wait for the print deploy workflow
   -h, --help                 Show this help text
 EOF
@@ -23,7 +23,7 @@ repository=""
 sha=""
 branch=""
 timeout_minutes=25
-poll_seconds=15
+poll_seconds=30
 skip_print=false
 
 while [[ $# -gt 0 ]]; do
@@ -85,32 +85,42 @@ if [[ -z "$repository" ]]; then
   repository="$(
     node -e '
       const url = process.argv[1];
-      const ssh = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
-      if (!ssh) process.exit(1);
-      process.stdout.write(ssh[1]);
+      const match = url.match(/[:/]([^/]+\/[^/]+?)(?:\.git)?$/);
+      if (!match) process.exit(1);
+      process.stdout.write(match[1]);
     ' "$origin_url"
   )"
 fi
 
-api_base="https://api.github.com/repos/${repository}/actions/workflows"
 deadline=$(( $(date +%s) + timeout_minutes * 60 ))
+api_url="https://api.github.com/repos/${repository}/actions/runs?per_page=50&branch=${branch}"
 
-fetch_run_state() {
-  local workflow_id="$1"
-  local label="$2"
+declare -A workflow_names=(
+  [build]="Build and Push Website"
+  [app]="App Deploy To VPS"
+  [print]="Print Deploy To VPS"
+)
+
+api_headers=(-H "User-Agent: website-actions-watcher")
+if [[ -n "${GH_TOKEN:-}" ]]; then
+  api_headers+=(-H "Authorization: Bearer ${GH_TOKEN}")
+elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
+  api_headers+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+
+fetch_states() {
   local payload=""
   local attempt
 
   for attempt in 1 2 3; do
-    if payload="$(curl -fsSL -H 'User-Agent: website-actions-watcher' \
-      "${api_base}/${workflow_id}/runs?per_page=20&branch=${branch}")"; then
+    if payload="$(curl -fsSL "${api_headers[@]}" "$api_url")"; then
       break
     fi
     sleep 2
   done
 
   if [[ -z "$payload" ]]; then
-    printf '%s|pending|||\n' "$label"
+    echo "api|pending|||"
     return 0
   fi
 
@@ -118,27 +128,32 @@ fetch_run_state() {
     const fs = require("fs");
     const payload = JSON.parse(fs.readFileSync(0, "utf8"));
     const sha = process.argv[1];
-    const label = process.argv[2];
-    const run = (payload.workflow_runs || []).find((item) => item.head_sha === sha);
-    if (!run) {
-      process.stdout.write(`${label}|missing|||\n`);
-      process.exit(0);
+    const includePrint = process.argv[2] === "true";
+    const workflowNames = {
+      build: "Build and Push Website",
+      app: "App Deploy To VPS",
+      print: "Print Deploy To VPS",
+    };
+
+    const labels = includePrint ? ["build", "app", "print"] : ["build", "app"];
+    const runs = (payload.workflow_runs || []).filter((item) => item.head_sha === sha);
+
+    for (const label of labels) {
+      const run = runs.find((item) => item.name === workflowNames[label]);
+      if (!run) {
+        process.stdout.write(`${label}|missing|||\n`);
+        continue;
+      }
+      process.stdout.write(
+        `${label}|${run.status}|${run.conclusion || ""}|${run.html_url || ""}|${run.name || ""}\n`
+      );
     }
-    process.stdout.write(
-      `${label}|${run.status}|${run.conclusion || ""}|${run.html_url || ""}|${run.name || ""}\n`
-    );
-  ' "$sha" "$label"
+  ' "$sha" "$([[ "$skip_print" == true ]] && echo false || echo true)"
 }
 
 print_header=false
 while [[ "$(date +%s)" -lt "$deadline" ]]; do
-  mapfile -t states < <(
-    fetch_run_state 289528857 build
-    fetch_run_state 289528856 app
-    if [[ "$skip_print" != true ]]; then
-      fetch_run_state 298801780 print
-    fi
-  )
+  mapfile -t states < <(fetch_states)
 
   all_ready=true
   if [[ "$print_header" == false ]]; then
@@ -148,21 +163,21 @@ while [[ "$(date +%s)" -lt "$deadline" ]]; do
 
   for state in "${states[@]}"; do
     IFS='|' read -r label status conclusion url workflow_name <<<"$state"
-    case "$status" in
-      missing)
+    case "$label:$status" in
+      api:pending)
+        echo "api: waiting for GitHub API"
+        all_ready=false
+        ;;
+      *:missing)
         echo "${label}: waiting for run to appear"
         all_ready=false
         ;;
-      completed)
+      *:completed)
         echo "${label}: ${conclusion:-completed} ${url}"
         if [[ "$conclusion" != "success" ]]; then
           echo "${workflow_name:-$label} failed." >&2
           exit 1
         fi
-        ;;
-      pending)
-        echo "${label}: waiting for GitHub API"
-        all_ready=false
         ;;
       *)
         echo "${label}: ${status:-unknown} ${url}"
