@@ -55,6 +55,14 @@ yarn-error.log*
 /secrets/*.token
 /secrets/*.json
 
+# local dev scratch
+.codex-dev.err.log
+.codex-dev.out.log
+/.codex-test-artifacts/
+/.local-data/
+my-bootstrap.config.json
+live-slice-*.stl
+
 # vercel
 .vercel
 
