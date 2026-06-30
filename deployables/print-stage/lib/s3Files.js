@@ -15,7 +15,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { env, parseCsv } from "./env";
 import { extractOrca3mfMetadataFromBuffer } from "./orca3mf";
-import { extractFirstPlateGcodeFrom3mfBuffer, inspect3mfPackageFromBuffer } from "./orca3mfPackage";
+import { inspect3mfPackageFromBuffer } from "./orca3mfPackage";
 import { sliceModelTo3mf } from "./orcaSlicer";
 import { computePrintPriceQuote } from "./printPricing.js";
 import {
@@ -30,7 +30,6 @@ const DOWNLOAD_URL_TTL_SECONDS = 60;
 const UPLOAD_URL_TTL_SECONDS = 300;
 const MANIFEST_FOLDER = "private/system/files/manifests";
 const PRINT_QUEUE_FOLDER = "private/system/print-queue";
-const SLICE_FOLDER = "private/system/files/slices";
 const GCODE_FOLDER = "private/system/files/gcode";
 
 function createS3Client() {
@@ -81,10 +80,6 @@ function buildManifestKey(fileId) {
   return `${MANIFEST_FOLDER}/${fileId}.json`;
 }
 
-function buildSliceObjectKey(ownerSub, fileId, filename) {
-  return `${SLICE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
-}
-
 function buildGcodeObjectKey(ownerSub, fileId, filename) {
   return `${GCODE_FOLDER}/${ownerSub}/${fileId}/${sanitizeFilename(filename)}`;
 }
@@ -122,13 +117,13 @@ function hasGeneratedGcodeArtifact(manifest) {
   return typeof manifest?.gcodeObjectKey === "string" &&
     manifest.gcodeObjectKey.length > 0 &&
     typeof manifest?.gcodeFilename === "string" &&
-    /\.gcode$/i.test(manifest.gcodeFilename);
+    /\.gcode\.3mf$/i.test(manifest.gcodeFilename);
 }
 
 function hasQueueArtifact(manifest) {
   return typeof manifest?.printQueueObjectKey === "string" &&
     manifest.printQueueObjectKey.length > 0 &&
-    /\.gcode$/i.test(manifest.printQueueObjectKey);
+    /\.gcode\.3mf$/i.test(manifest.printQueueObjectKey);
 }
 
 function decorateManifest(manifest) {
@@ -500,18 +495,16 @@ async function processFileForPrinting(manifest) {
     await deleteSliceCopyIfPresent(manifest);
     await deleteGcodeCopyIfPresent(manifest);
 
-    const slicedObjectKey = buildSliceObjectKey(manifest.ownerSub, manifest.id, sliced.outputFilename);
+    const gcodeObjectKey = buildGcodeObjectKey(manifest.ownerSub, manifest.id, sliced.outputFilename);
     await writeObjectBuffer(
-      slicedObjectKey,
+      gcodeObjectKey,
       sliced.outputBuffer,
       "application/vnd.ms-package.3dmanufacturing-3dmodel+xml",
     );
 
     const extracted = await extractOrca3mfMetadataFromBuffer(sliced.outputBuffer, sliced.outputFilename);
-    const gcode = await extractFirstPlateGcodeFrom3mfBuffer(sliced.outputBuffer, sliced.outputFilename);
-    const gcodeFilename = `${path.parse(manifest.originalFilename).name}.gcode`;
-    const gcodeObjectKey = buildGcodeObjectKey(manifest.ownerSub, manifest.id, gcodeFilename);
-    await writeObjectBuffer(gcodeObjectKey, gcode.gcodeBuffer, "text/plain");
+    const gcodeFilename = sliced.outputFilename;
+    const slicedObjectKey = gcodeObjectKey;
 
     const updated = {
       ...manifest,

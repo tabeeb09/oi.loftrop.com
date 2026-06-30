@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       Bucket: env.S3_PRIVATE_BUCKET,
       Key: objectKey,
       ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(
-        file.gcodeFilename || `${file.originalFilename}.gcode`,
+        file.gcodeFilename || `${file.originalFilename}.gcode.3mf`,
       )}`,
     }),
     { expiresIn: 60 },

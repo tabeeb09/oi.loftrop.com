@@ -107,7 +107,7 @@ export default function PrintQueuePage({ files }) {
                     </td>
                     <td style={{ padding: "0.65rem 0" }}>
                       <button type="button" onClick={() => downloadQueueArtifact(file.id)}>
-                        Download G-code
+                        Download Gcode.3MF
                       </button>
                     </td>
                     <td style={{ padding: "0.65rem 0" }}>{formatDate(file.printRequestedAt)}</td>
