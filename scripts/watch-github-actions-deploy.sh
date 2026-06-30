@@ -98,9 +98,23 @@ deadline=$(( $(date +%s) + timeout_minutes * 60 ))
 fetch_run_state() {
   local workflow_id="$1"
   local label="$2"
-  curl -fsSL -H 'User-Agent: website-actions-watcher' \
-    "${api_base}/${workflow_id}/runs?per_page=20&branch=${branch}" | \
-  node -e '
+  local payload=""
+  local attempt
+
+  for attempt in 1 2 3; do
+    if payload="$(curl -fsSL -H 'User-Agent: website-actions-watcher' \
+      "${api_base}/${workflow_id}/runs?per_page=20&branch=${branch}")"; then
+      break
+    fi
+    sleep 2
+  done
+
+  if [[ -z "$payload" ]]; then
+    printf '%s|pending|||\n' "$label"
+    return 0
+  fi
+
+  printf '%s' "$payload" | node -e '
     const fs = require("fs");
     const payload = JSON.parse(fs.readFileSync(0, "utf8"));
     const sha = process.argv[1];
@@ -145,6 +159,10 @@ while [[ "$(date +%s)" -lt "$deadline" ]]; do
           echo "${workflow_name:-$label} failed." >&2
           exit 1
         fi
+        ;;
+      pending)
+        echo "${label}: waiting for GitHub API"
+        all_ready=false
         ;;
       *)
         echo "${label}: ${status:-unknown} ${url}"
