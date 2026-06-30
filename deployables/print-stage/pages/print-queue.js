@@ -46,6 +46,10 @@ export default function PrintQueuePage({ files }) {
     window.location.reload();
   }
 
+  function downloadQueueArtifact(fileId) {
+    window.location.assign(`/api/print-queue/${encodeURIComponent(fileId)}/download`);
+  }
+
   return (
     <SiteShell title="3D Printer">
       <Head>
@@ -77,6 +81,7 @@ export default function PrintQueuePage({ files }) {
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Size</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Mass</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Print state</th>
+                <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Download</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Requested</th>
                 <th style={{ textAlign: "left", padding: "0.5rem 0" }}>Started</th>
               </tr>
@@ -100,13 +105,18 @@ export default function PrintQueuePage({ files }) {
                     <td style={{ padding: "0.65rem 0", textTransform: "capitalize" }}>
                       {file.printStatus}
                     </td>
+                    <td style={{ padding: "0.65rem 0" }}>
+                      <button type="button" onClick={() => downloadQueueArtifact(file.id)}>
+                        Download G-code
+                      </button>
+                    </td>
                     <td style={{ padding: "0.65rem 0" }}>{formatDate(file.printRequestedAt)}</td>
                     <td style={{ padding: "0.65rem 0" }}>{formatDate(file.printStartedAt)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} style={{ padding: "0.9rem 0", color: "#666" }}>
+                  <td colSpan={10} style={{ padding: "0.9rem 0", color: "#666" }}>
                     No files are currently queued for printing.
                   </td>
                 </tr>
