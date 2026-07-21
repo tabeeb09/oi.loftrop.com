@@ -31,7 +31,8 @@ const leadStories = [
     summary:
       "A report on memristive devices, spiking neural networks, and neuromorphic approaches to efficient computation.",
     heroImageUrl: resourceUrl(papers.neuromorphic.heroResourceId),
-    heroImagePosition: "100% center",
+    heroImagePosition: "center, 100% center",
+    heroImageSize: "cover, 80% auto",
     heroTone: "auto" as const,
   },
   {
