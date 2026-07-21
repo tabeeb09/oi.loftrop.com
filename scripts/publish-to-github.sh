@@ -17,7 +17,6 @@ Options:
   -m, --message <text>       Commit message
   --include-untracked        Stage untracked non-ignored files as well
   --skip-wait                Push and exit without waiting for Actions
-  --skip-print-watch         Do not wait for the print deploy workflow
   -h, --help                 Show this help text
 EOF
 }
@@ -25,7 +24,6 @@ EOF
 message=""
 include_untracked=false
 skip_wait=false
-skip_print_watch=false
 declare -a path_args=()
 declare -a staged_paths=()
 
@@ -41,9 +39,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --skip-wait)
       skip_wait=true
-      ;;
-    --skip-print-watch)
-      skip_print_watch=true
       ;;
     --)
       shift
@@ -111,23 +106,4 @@ if [[ "$skip_wait" == true ]]; then
   exit 0
 fi
 
-watch_args=()
-if [[ "$skip_print_watch" == true ]]; then
-  watch_args+=(--skip-print)
-else
-  watch_print=false
-  for staged_path in "${staged_paths[@]}"; do
-    case "$staged_path" in
-      deployables/print-stage/*|scripts/bootstrap-print-vps.sh|scripts/prepare-print-env.mjs|scripts/seed-print-openbao-from-env.mjs|scripts/fetch-openbao-secrets.mjs|.github/workflows/print-deploy-vps.yml)
-        watch_print=true
-        break
-        ;;
-    esac
-  done
-
-  if [[ "$watch_print" != true ]]; then
-    watch_args+=(--skip-print)
-  fi
-fi
-
-bash scripts/watch-github-actions-deploy.sh --sha "$(git rev-parse HEAD)" --branch "$branch" "${watch_args[@]}"
+bash scripts/watch-github-actions-deploy.sh --sha "$(git rev-parse HEAD)" --branch "$branch"

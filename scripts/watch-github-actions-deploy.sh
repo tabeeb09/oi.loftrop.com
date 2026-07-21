@@ -14,7 +14,6 @@ Options:
   --branch <branch>          Branch name (default: current branch)
   --timeout-minutes <mins>   Timeout in minutes (default: 25)
   --poll-seconds <secs>      Poll interval in seconds (default: 30)
-  --skip-print               Do not wait for the print deploy workflow
   -h, --help                 Show this help text
 EOF
 }
@@ -24,7 +23,6 @@ sha=""
 branch=""
 timeout_minutes=25
 poll_seconds=30
-skip_print=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -47,9 +45,6 @@ while [[ $# -gt 0 ]]; do
     --poll-seconds)
       shift
       poll_seconds="${1:-}"
-      ;;
-    --skip-print)
-      skip_print=true
       ;;
     -h|--help)
       usage
@@ -98,7 +93,6 @@ api_url="https://api.github.com/repos/${repository}/actions/runs?per_page=50&bra
 declare -A workflow_names=(
   [build]="Build and Push Website"
   [app]="App Deploy To VPS"
-  [print]="Print Deploy To VPS"
 )
 
 api_headers=(-H "User-Agent: website-actions-watcher")
@@ -132,10 +126,9 @@ fetch_states() {
     const workflowNames = {
       build: "Build and Push Website",
       app: "App Deploy To VPS",
-      print: "Print Deploy To VPS",
     };
 
-    const labels = includePrint ? ["build", "app", "print"] : ["build", "app"];
+    const labels = ["build", "app"];
     const runs = (payload.workflow_runs || []).filter((item) => item.head_sha === sha);
 
     for (const label of labels) {
@@ -148,7 +141,7 @@ fetch_states() {
         `${label}|${run.status}|${run.conclusion || ""}|${run.html_url || ""}|${run.name || ""}\n`
       );
     }
-  ' "$sha" "$([[ "$skip_print" == true ]] && echo false || echo true)"
+  ' "$sha"
 }
 
 print_header=false
