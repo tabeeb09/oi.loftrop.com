@@ -212,8 +212,25 @@ textarea {
   justify-content: flex-end;
 }
 
+.lead-card,
+.story-card {
+  box-shadow: 4px 5px 0 rgba(28, 24, 18, 0.09);
+  transition:
+    transform 360ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 360ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.lead-card:hover,
+.lead-card:focus-within,
+.story-card:hover,
+.story-card:focus-within {
+  transform: translateY(-4px);
+  box-shadow: 7px 9px 0 rgba(28, 24, 18, 0.13);
+}
+
 .lead-card--image,
 .story-card--image {
+  --card-title-rest-shift: 4.8rem;
   position: relative;
   overflow: hidden;
   background-position: center;
@@ -221,18 +238,41 @@ textarea {
   background-size: cover;
 }
 
+.lead-card--image {
+  --card-title-rest-shift: 6.4rem;
+}
+
 .lead-card--image::before,
 .story-card--image::before {
   content: "";
   position: absolute;
   inset: 0;
+  background: linear-gradient(180deg, rgba(10, 12, 16, 0.02) 0%, rgba(10, 12, 16, 0.34) 100%);
+  pointer-events: none;
+}
+
+.lead-card--image::after,
+.story-card--image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
   background: linear-gradient(180deg, rgba(10, 12, 16, 0.08) 0%, rgba(10, 12, 16, 0.72) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 420ms ease;
+}
+
+.lead-card--image:hover::after,
+.lead-card--image:focus-within::after,
+.story-card--image:hover::after,
+.story-card--image:focus-within::after {
+  opacity: 1;
 }
 
 .lead-card--image > *,
 .story-card--image > * {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .lead-card--dark,
@@ -293,6 +333,19 @@ textarea {
   font-size: clamp(2.4rem, 5vw, 5.4rem);
 }
 
+.lead-card--image h2,
+.story-card--image h2 {
+  transform: translateY(var(--card-title-rest-shift));
+  transition: transform 420ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.lead-card--image:hover h2,
+.lead-card--image:focus-within h2,
+.story-card--image:hover h2,
+.story-card--image:focus-within h2 {
+  transform: translateY(0);
+}
+
 .lead-card h2 a,
 .story-card h2 a {
   color: var(--ink);
@@ -313,6 +366,32 @@ textarea {
 .story-card.story-card--image p {
   font-size: 1.05rem;
   line-height: 1.45;
+}
+
+.lead-card--image .eyebrow,
+.lead-card--image p:not(.eyebrow),
+.lead-card--image .read-link,
+.story-card--image .eyebrow,
+.story-card--image p:not(.eyebrow),
+.story-card--image .read-link {
+  opacity: 0;
+  transition: opacity 360ms ease;
+}
+
+.lead-card--image:hover .eyebrow,
+.lead-card--image:hover p:not(.eyebrow),
+.lead-card--image:hover .read-link,
+.lead-card--image:focus-within .eyebrow,
+.lead-card--image:focus-within p:not(.eyebrow),
+.lead-card--image:focus-within .read-link,
+.story-card--image:hover .eyebrow,
+.story-card--image:hover p:not(.eyebrow),
+.story-card--image:hover .read-link,
+.story-card--image:focus-within .eyebrow,
+.story-card--image:focus-within p:not(.eyebrow),
+.story-card--image:focus-within .read-link {
+  opacity: 1;
+  transition-delay: 120ms;
 }
 
 .lead-card p:not(.eyebrow),

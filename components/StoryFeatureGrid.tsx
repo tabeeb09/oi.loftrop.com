@@ -32,8 +32,7 @@ function StoryCard({
     () =>
       imageUrl
         ? {
-            backgroundImage:
-              "linear-gradient(rgba(15, 18, 23, 0.24), rgba(15, 18, 23, 0.62)), url(" + imageUrl + ")",
+            backgroundImage: "url(" + imageUrl + ")",
             backgroundPosition: story.heroImagePosition,
             backgroundSize: story.heroImageSize,
           }
