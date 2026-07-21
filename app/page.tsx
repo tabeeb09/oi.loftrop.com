@@ -31,6 +31,7 @@ const leadStories = [
     summary:
       "A report on memristive devices, spiking neural networks, and neuromorphic approaches to efficient computation.",
     heroImageUrl: resourceUrl(papers.neuromorphic.heroResourceId),
+    heroImagePosition: "100% center",
     heroTone: "auto" as const,
   },
   {
@@ -48,6 +49,8 @@ const leadStories = [
     title: "Print farm",
     summary:
       "A backend-sliced print submission service for quoting, payment, queueing, and managed print execution.",
+    heroImageUrl: resourceUrl("image.printFarmMakerspace"),
+    heroTone: "auto" as const,
   },
   {
     href: "/reflectance",
@@ -55,6 +58,8 @@ const leadStories = [
     title: papers.reflectance.title,
     summary:
       "Transfer-matrix modelling of dielectric coatings, from anti-reflection layers to multilayer dielectric mirrors.",
+    heroImageUrl: resourceUrl("image.reflectanceDielectricMirror"),
+    heroTone: "auto" as const,
   },
   {
     href: "/climate_data_analysis",
@@ -62,6 +67,8 @@ const leadStories = [
     title: papers.climate.title,
     summary:
       "A scientific computing project that frames climate observations through analysis, modelling, and report presentation.",
+    heroImageUrl: resourceUrl("image.climateForest"),
+    heroTone: "auto" as const,
   },
 ];
 
@@ -73,13 +80,14 @@ export default function Home() {
           <p className="eyebrow">Portfolio journal</p>
           <h1>Tabeeb Rahman</h1>
           <p className="home-deck">
-            Software engineer, data scientist, physicist, and mathematician. This site presents
-            my work in a clear, organized format.
+            BSc Mathematics & Physics Graduate from the University of Bath (2:1). Software
+            engineer, data scientist, physicist, and mathematician. This site presents my work in a
+            clear, organized format.
           </p>
         </div>
         <figure>
           <img src={resourceUrl("image.profile")} alt="Tabeeb Rahman" />
-          <figcaption>Mathematics with Physics, University of Bath.</figcaption>
+          <figcaption>BSc Mathematics & Physics, University of Bath (2:1).</figcaption>
         </figure>
       </section>
 

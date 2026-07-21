@@ -45,6 +45,7 @@ const contentTypes = new Map([
   [".jpeg", "image/jpeg"],
   [".png", "image/png"],
   [".jfif", "image/jpeg"],
+  [".webp", "image/webp"],
   [".pdf", "application/pdf"],
   [".xml", "application/xml"],
   [".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],

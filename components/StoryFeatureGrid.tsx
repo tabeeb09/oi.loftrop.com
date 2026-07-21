@@ -8,6 +8,7 @@ type Story = {
   title: string;
   summary: string;
   heroImageUrl?: string;
+  heroImagePosition?: string;
   heroTone?: "light" | "dark" | "auto";
 };
 
@@ -32,9 +33,10 @@ function StoryCard({
         ? {
             backgroundImage:
               "linear-gradient(rgba(15, 18, 23, 0.24), rgba(15, 18, 23, 0.62)), url(" + imageUrl + ")",
+            backgroundPosition: story.heroImagePosition,
           }
         : undefined,
-    [imageUrl],
+    [imageUrl, story.heroImagePosition],
   );
 
   const tone = imageUrl

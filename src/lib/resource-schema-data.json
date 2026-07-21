@@ -77,6 +77,27 @@
     "localPath": "public/images/research/hhg-nanostructures.jfif"
   },
   {
+    "id": "image.printFarmMakerspace",
+    "kind": "image",
+    "title": "Makerspace print farm hero image",
+    "key": "images/projects/makerspace-image.jpeg",
+    "localPath": "public/images/projects/makerspace-image.jpeg"
+  },
+  {
+    "id": "image.reflectanceDielectricMirror",
+    "kind": "image",
+    "title": "Dielectric mirror hero image",
+    "key": "images/projects/dielectric-mirror.webp",
+    "localPath": "public/images/projects/dielectric-mirror.webp"
+  },
+  {
+    "id": "image.climateForest",
+    "kind": "image",
+    "title": "Forest climate data hero image",
+    "key": "images/projects/forest.jpg",
+    "localPath": "public/images/projects/forest.jpg"
+  },
+  {
     "id": "pdf.hhg",
     "kind": "pdf",
     "title": "High harmonic generation plasmonic report",
