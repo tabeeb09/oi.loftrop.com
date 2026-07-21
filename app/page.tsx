@@ -9,7 +9,7 @@ const bestGrades = [
   { module: "Scientific Presentation", grade: "100%" },
   { module: "Climate Change Advanced Data Analysis", grade: "90%", href: "/climate_data_analysis" },
   { module: "Reflectance in Dielectric Structures", grade: "75%", href: "/reflectance" },
-  { module: "Scientific Computing", grade: "75%" },
+  { module: "Memristive Machine Learning Thesis", grade: "73%", href: "/neuromorphic" },
   { module: "Mathematical Modelling", grade: "70%" },
 ];
 
