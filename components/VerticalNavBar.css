@@ -8,6 +8,7 @@
   color: var(--ink);
   display: flex;
   flex-direction: column;
+  font-family: var(--font-editorial);
 }
 
 .nav-container.nav-collapsed {
@@ -67,7 +68,7 @@
 
 .nav-mark strong {
   display: block;
-  font-family: var(--font-source-serif), Georgia, serif;
+  font-family: var(--font-editorial);
   font-size: 1.05rem;
   line-height: 1;
 }
@@ -128,7 +129,7 @@
 
 .nav-link span {
   display: block;
-  font-family: var(--font-source-serif), Georgia, serif;
+  font-family: var(--font-editorial);
   font-size: 0.98rem;
   line-height: 1.15;
 }

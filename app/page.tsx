@@ -81,9 +81,7 @@ export default function Home() {
           <p className="eyebrow">Portfolio journal</p>
           <h1>Tabeeb Rahman</h1>
           <p className="home-deck">
-            BSc Mathematics & Physics Graduate from the University of Bath (2:1). Software
-            engineer, data scientist, physicist, and mathematician. This site presents my work in a
-            clear, organized format.
+            BSc Mathematics & Physics Graduate from the University of Bath (2:1).
           </p>
         </div>
         <figure>
