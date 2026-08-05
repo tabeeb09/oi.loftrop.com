@@ -7,15 +7,13 @@ on:
       - main
     paths:
       - ".github/workflows/caid-converge-vps.yml"
-  schedule:
-    - cron: "*/15 * * * *"
 
 permissions:
   contents: read
 
 concurrency:
   group: caid-converge-from-website-runner
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   converge:
@@ -30,11 +28,15 @@ jobs:
           sudo git checkout main
           sudo git reset --hard origin/main
           set +e
-          sudo bash scripts/caid-converge.sh --mode noninteractive
-          status="$?"
+          sudo bash scripts/caid-converge.sh --mode noninteractive 2>&1 | tee /tmp/caid-converge.log
+          status="${PIPESTATUS[0]}"
           set -e
           if test "$status" = "20"; then
             echo "CAId converge published pending human config requests."
+            exit 0
+          fi
+          if test "$status" = "2" && grep -qi "Vault is sealed" /tmp/caid-converge.log; then
+            echo "::warning::CAId converge skipped because OpenBao/Vault is sealed on the runner."
             exit 0
           fi
           exit "$status"
