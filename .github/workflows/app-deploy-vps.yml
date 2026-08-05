@@ -24,7 +24,7 @@ permissions:
 
 concurrency:
   group: app-deploy-vps
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -157,7 +157,7 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           # shellcheck disable=SC2086
-          ssh ${SSH_OPTS} -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && sudo BOOTSTRAP_ON_FAILURE='${BOOTSTRAP_ON_FAILURE}' PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' bash scripts/website-stack-vps.sh bootstrap" || {
+          ssh ${SSH_OPTS} -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} "cd '${DEPLOY_PATH}' && set +e && sudo BOOTSTRAP_ON_FAILURE='${BOOTSTRAP_ON_FAILURE}' PROJECT_ROOT='${DEPLOY_PATH}' PROJECT_NAME='${PROJECT_NAME}' bash scripts/website-stack-vps.sh bootstrap 2>&1 | tee /tmp/website-bootstrap.log; status=\"\${PIPESTATUS[0]}\"; set -e; if test \"\$status\" != \"0\" && grep -qiE 'OpenBao AppRole login failed with status 503|Vault is sealed' /tmp/website-bootstrap.log && test -f /etc/website/deploy.env; then echo '::warning::OpenBao is sealed; continuing with existing /etc/website/deploy.env.'; exit 0; fi; exit \"\$status\"" || {
             echo 'VPS bootstrap requires valid AppRole credentials. SSH to the VPS over your admin path and run:'
             echo '  cd /srv/website/app && sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website bash scripts/website-stack-vps.sh bootstrap'
             exit 1
@@ -167,7 +167,15 @@ jobs:
         if: env.DEPLOY_MODE == 'local'
         run: |
           cd "${DEPLOY_PATH}"
-          sudo BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE}" PROJECT_ROOT="${DEPLOY_PATH}" PROJECT_NAME="${PROJECT_NAME}" bash scripts/website-stack-vps.sh bootstrap
+          set +e
+          sudo BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE}" PROJECT_ROOT="${DEPLOY_PATH}" PROJECT_NAME="${PROJECT_NAME}" bash scripts/website-stack-vps.sh bootstrap 2>&1 | tee /tmp/website-bootstrap.log
+          status="${PIPESTATUS[0]}"
+          set -e
+          if test "$status" != "0" && grep -qiE "OpenBao AppRole login failed with status 503|Vault is sealed" /tmp/website-bootstrap.log && test -f /etc/website/deploy.env; then
+            echo "::warning::OpenBao is sealed; continuing with existing /etc/website/deploy.env."
+            exit 0
+          fi
+          exit "$status"
 
       - name: Converge CAId locally when present
         if: env.DEPLOY_MODE == 'local'
@@ -183,11 +191,15 @@ jobs:
           sudo git checkout main
           sudo git reset --hard origin/main
           set +e
-          sudo bash scripts/caid-converge.sh --mode noninteractive
-          status="$?"
+          sudo bash scripts/caid-converge.sh --mode noninteractive 2>&1 | tee /tmp/caid-converge.log
+          status="${PIPESTATUS[0]}"
           set -e
           if test "$status" = "20"; then
             echo "CAId converge published pending human config requests."
+            exit 0
+          fi
+          if test "$status" = "2" && grep -qi "Vault is sealed" /tmp/caid-converge.log; then
+            echo "::warning::CAId converge skipped because OpenBao/Vault is sealed on the runner."
             exit 0
           fi
           exit "$status"
