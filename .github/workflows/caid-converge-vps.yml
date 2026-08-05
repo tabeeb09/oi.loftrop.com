@@ -28,6 +28,19 @@ jobs:
           sudo git checkout main
           sudo git reset --hard origin/main
           set +e
+          sudo docker compose --env-file /etc/caid/caid.env -f /srv/caid/docker-compose.yaml exec -T openbao env BAO_ADDR=http://127.0.0.1:8200 bao status -format=json >/tmp/caid-openbao-status.json 2>/tmp/caid-openbao-status.err
+          status_check="$?"
+          set -e
+          if grep -qi '"sealed"[[:space:]]*:[[:space:]]*true' /tmp/caid-openbao-status.json /tmp/caid-openbao-status.err 2>/dev/null; then
+            echo "::warning::CAId converge skipped because OpenBao/Vault is sealed on the runner."
+            exit 0
+          fi
+          if test "$status_check" != "0"; then
+            echo "Could not read OpenBao status before converge." >&2
+            cat /tmp/caid-openbao-status.err >&2 || true
+            exit "$status_check"
+          fi
+          set +e
           sudo bash scripts/caid-converge.sh --mode noninteractive 2>&1 | tee /tmp/caid-converge.log
           status="${PIPESTATUS[0]}"
           set -e

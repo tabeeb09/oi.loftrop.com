@@ -178,7 +178,7 @@ jobs:
           exit "$status"
 
       - name: Converge CAId locally when present
-        if: env.DEPLOY_MODE == 'local'
+        if: env.DEPLOY_MODE == 'local' && vars.RUN_CAID_CONVERGE_ON_APP_DEPLOY == 'true'
         run: |
           if test ! -d /srv/caid/.git; then
             echo "CAId repo is not present on this runner; skipping CAId converge."
