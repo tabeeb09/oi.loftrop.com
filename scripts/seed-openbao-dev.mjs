@@ -11,6 +11,7 @@ const pathConfig = {
   rustfs: process.env.BAO_SECRET_PATH_RUSTFS || "rustfs/prod",
   oauth2Proxy: process.env.BAO_SECRET_PATH_OAUTH2_PROXY || "oauth2-proxy/prod",
   keycloak: process.env.BAO_SECRET_PATH_KEYCLOAK || "keycloak/prod",
+  supabase: process.env.BAO_SECRET_PATH_SUPABASE || "supabase/prod",
 };
 
 const keyGroups = {
@@ -28,10 +29,19 @@ const keyGroups = {
     "GOOGLE_CLIENT_SECRET",
   ],
   rustfs: [
+    "FILE_STORAGE_PROVIDER",
     "NEXT_PUBLIC_MEDIA_BASE_URL",
+    "NEXT_PUBLIC_MEDIA_BUCKET",
+    "NEXT_PUBLIC_MEDIA_KEY_PREFIX",
+    "STORAGE_PROJECT",
     "S3_ENDPOINT",
     "S3_PUBLIC_ENDPOINT",
     "S3_BUCKET",
+    "S3_PUBLIC_BUCKET",
+    "S3_PRIVATE_BUCKET",
+    "S3_PROJECT_KEY_PREFIX",
+    "S3_PUBLIC_KEY_PREFIX",
+    "S3_PRIVATE_KEY_PREFIX",
     "S3_REGION",
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
@@ -52,6 +62,15 @@ const keyGroups = {
     "KEYCLOAK_DB_PASSWORD",
     "KEYCLOAK_ADMIN_USER",
     "KEYCLOAK_BOOTSTRAP_ADMIN_PASSWORD",
+  ],
+  supabase: [
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_BUCKET",
+    "FILE_UPLOAD_MAX_BYTES",
+    "FILE_ALLOWED_MIME_TYPES",
+    "FILE_ALLOWED_EXTENSIONS",
+    "KEYCLOAK_FILE_ADMIN_ROLES",
   ],
 };
 

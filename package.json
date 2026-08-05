@@ -14,11 +14,16 @@
     "up:fullstack:local": "node scripts/full-stack-local-up.mjs",
     "prepare:fullstack:prod": "node scripts/prepare-full-stack-env.mjs --mode prod --base .env.example --runtime .env.runtime --output .env.full.generated",
     "init:rustfs": "node scripts/init-rustfs-bucket.mjs",
-    "upload:resources": "node scripts/upload-site-resources.mjs"
+    "upload:resources": "node scripts/upload-site-resources.mjs",
+    "migrate:s3-project": "node scripts/migrate-s3-project.mjs",
+    "test:storage-project": "node scripts/test-storage-project-config.mjs",
+    "bootstrap:keycloak:test-users:local": "node scripts/bootstrap-local-keycloak-test-users.mjs",
+    "test:files:local": "node scripts/test-file-flow-local.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@supabase/supabase-js": "^2.108.2",
     "bootstrap": "^5.3.0",
     "lightningcss": "^1.31.1",
     "next": "16.0.1",
@@ -38,6 +43,7 @@
     "baseline-browser-mapping": "^2.10.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
+    "playwright": "^1.61.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

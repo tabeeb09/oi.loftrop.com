@@ -60,15 +60,25 @@ export function mediaBucket() {
   return process.env.NEXT_PUBLIC_MEDIA_BUCKET || defaultBucket;
 }
 
+export function mediaKeyPrefix() {
+  return (process.env.NEXT_PUBLIC_MEDIA_KEY_PREFIX || "").replace(/^\/+|\/+$/g, "");
+}
+
+function mediaObjectKey(key: string) {
+  const cleanKey = key.replace(/^\/+/, "");
+  const prefix = mediaKeyPrefix();
+  return prefix ? `${prefix}/${cleanKey}` : cleanKey;
+}
+
 export function resourceUrl(id: ResourceId) {
   const resource = resourceById(id);
   if (!resource.key) {
     throw new Error(`Resource ${id} does not map to a single key.`);
   }
 
-  return `${mediaBaseUrl()}/${mediaBucket()}/${resource.key.replace(/^\/+/, "")}`;
+  return `${mediaBaseUrl()}/${mediaBucket()}/${mediaObjectKey(resource.key)}`;
 }
 
 export function resourceUrlFromKey(key: string) {
-  return `${mediaBaseUrl()}/${mediaBucket()}/${key.replace(/^\/+/, "")}`;
+  return `${mediaBaseUrl()}/${mediaBucket()}/${mediaObjectKey(key)}`;
 }

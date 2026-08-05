@@ -11,7 +11,7 @@ This repo now assumes:
 
 - `/etc/website/base.env`
   - non-secret deploy configuration
-  - hostnames, image name, OpenBao URL, Keycloak issuer, bucket names
+  - hostnames, image name, OpenBao URL, Keycloak issuer, bucket names, file-storage provider, optional Supabase project URL
 - `/etc/website/openbao-bootstrap.env`
   - one-time AppRole bootstrap credentials
   - `BAO_ADDR`, `OPENBAO_ROLE_ID`, `OPENBAO_SECRET_ID`
@@ -94,7 +94,7 @@ sudo PROJECT_ROOT=/srv/website/app PROJECT_NAME=website ./scripts/bootstrap-app-
    - `OPENBAO_ROLE_ID`
    - `OPENBAO_SECRET_ID`
 6. The script stores them in `/etc/website/openbao-bootstrap.env`
-7. The script fetches secrets from OpenBao, generates `/etc/website/deploy.env`, and completes bootstrap
+7. The script fetches secrets from OpenBao, including the new file-storage namespace, generates `/etc/website/deploy.env`, and completes bootstrap
 8. Then deploy:
 
 ```bash
@@ -122,3 +122,42 @@ GitHub Actions can run:
 3. `scripts/deploy-app-vps.sh`
 
 If AppRole credentials become invalid, bootstrap fails and the operator must re-run it interactively over SSH or VPN to paste new credentials.
+
+## File storage secrets
+
+The user file-storage layer reads its runtime secrets from OpenBao under the same bootstrap flow. The required deployed keys are:
+
+For `FILE_STORAGE_PROVIDER=s3`:
+
+```text
+FILE_STORAGE_PROVIDER
+S3_ENDPOINT
+S3_ACCESS_KEY_ID
+S3_SECRET_ACCESS_KEY
+S3_PRIVATE_BUCKET
+FILE_UPLOAD_MAX_BYTES
+FILE_ALLOWED_MIME_TYPES
+FILE_ALLOWED_EXTENSIONS
+KEYCLOAK_FILE_ADMIN_ROLES
+```
+
+For `FILE_STORAGE_PROVIDER=supabase`:
+
+```text
+FILE_STORAGE_PROVIDER
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_STORAGE_BUCKET
+FILE_UPLOAD_MAX_BYTES
+FILE_ALLOWED_MIME_TYPES
+FILE_ALLOWED_EXTENSIONS
+KEYCLOAK_FILE_ADMIN_ROLES
+```
+
+The default OpenBao KV path for this namespace is:
+
+```text
+supabase/prod
+```
+
+If any required key is missing, `scripts/fetch-openbao-secrets.mjs` exits non-zero and `scripts/bootstrap-app-vps.sh` stops before generating a usable deploy environment.

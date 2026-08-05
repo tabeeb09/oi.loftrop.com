@@ -28,6 +28,7 @@ const defaults = {
   BAO_SECRET_PATH_RUSTFS: "rustfs/prod",
   BAO_SECRET_PATH_OAUTH2_PROXY: "oauth2-proxy/prod",
   BAO_SECRET_PATH_KEYCLOAK: "keycloak/prod",
+  BAO_SECRET_PATH_SUPABASE: "supabase/prod",
 };
 
 const requiredByMode = {
@@ -37,11 +38,16 @@ const requiredByMode = {
     "NEXTAUTH_URL",
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_MEDIA_BASE_URL",
+    "FILE_STORAGE_PROVIDER",
     "S3_ENDPOINT",
     "S3_PUBLIC_ENDPOINT",
     "S3_BUCKET",
+    "S3_PRIVATE_BUCKET",
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_BUCKET",
     "KEYCLOAK_ISSUER",
     "KEYCLOAK_CLIENT_ID",
     "KEYCLOAK_CLIENT_SECRET",
@@ -61,11 +67,16 @@ const requiredByMode = {
     "NEXTAUTH_URL",
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_MEDIA_BASE_URL",
+    "FILE_STORAGE_PROVIDER",
     "S3_ENDPOINT",
     "S3_PUBLIC_ENDPOINT",
     "S3_BUCKET",
+    "S3_PRIVATE_BUCKET",
     "S3_ACCESS_KEY_ID",
     "S3_SECRET_ACCESS_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_BUCKET",
     "KEYCLOAK_ISSUER",
     "KEYCLOAK_CLIENT_ID",
     "KEYCLOAK_CLIENT_SECRET",
@@ -146,7 +157,36 @@ function main() {
     throw new Error(`Unsupported mode: ${mode}`);
   }
 
-  const missing = requiredKeys.filter((key) => !merged[key]);
+  const provider = merged.FILE_STORAGE_PROVIDER || "local";
+  const storageSpecificKeys =
+    provider === "supabase"
+      ? ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_STORAGE_BUCKET"]
+      : provider === "s3"
+        ? ["S3_PRIVATE_BUCKET"]
+        : [];
+
+  const relaxedKeys = new Set([
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_STORAGE_BUCKET",
+    "S3_PRIVATE_BUCKET",
+  ]);
+
+  const missing = [...requiredKeys, ...storageSpecificKeys].filter((key) => {
+    if (key === "S3_BUCKET" && merged.S3_PUBLIC_BUCKET) {
+      return false;
+    }
+
+    if (!merged[key]) {
+      if (relaxedKeys.has(key) && !storageSpecificKeys.includes(key)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  });
 
   if (missing.length) {
     throw new Error(

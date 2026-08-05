@@ -40,14 +40,19 @@ set -a
 source "$DEPLOY_ENV_FILE"
 set +a
 
-required_vars=(S3_ENDPOINT S3_BUCKET S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY)
+required_vars=(S3_ENDPOINT S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY)
 for required_var in "${required_vars[@]}"; do
   if [[ -z "${!required_var:-}" ]]; then
     echo "Missing $required_var in $DEPLOY_ENV_FILE; cannot initialize RustFS bucket." >&2
     exit 1
   fi
 done
+if [[ -z "${S3_BUCKET:-}" && -z "${S3_PUBLIC_BUCKET:-}" ]]; then
+  echo "Missing S3_BUCKET or S3_PUBLIC_BUCKET in $DEPLOY_ENV_FILE; cannot initialize RustFS bucket." >&2
+  exit 1
+fi
 
+PUBLIC_BUCKET="${S3_PUBLIC_BUCKET:-$S3_BUCKET}"
 PRIVATE_BUCKET="${S3_PRIVATE_BUCKET:-private-user-files}"
 
 echo "Waiting for RustFS S3 API..."
@@ -81,15 +86,15 @@ if ! docker run --rm \
   -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
   -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
   amazon/aws-cli s3api head-bucket \
-    --bucket "$S3_BUCKET" \
+    --bucket "$PUBLIC_BUCKET" \
     --endpoint-url "$S3_ENDPOINT" >/dev/null 2>&1; then
-  echo "Creating RustFS bucket: $S3_BUCKET"
+  echo "Creating RustFS public bucket: $PUBLIC_BUCKET"
   docker run --rm \
     --network "${RUSTFS_NETWORK:-rustfs_internal}" \
     -e AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
     -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
     -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
-    amazon/aws-cli s3 mb "s3://$S3_BUCKET" \
+    amazon/aws-cli s3 mb "s3://$PUBLIC_BUCKET" \
       --endpoint-url "$S3_ENDPOINT"
 fi
 
@@ -117,7 +122,7 @@ docker run --rm \
   -e S3_ENDPOINT="$S3_ENDPOINT" \
   -e S3_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" \
   -e S3_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
-  -e S3_BUCKET="$S3_BUCKET" \
+  -e S3_BUCKET="$PUBLIC_BUCKET" \
   minio/mc:latest -lc '
     mc alias set rustfs "$S3_ENDPOINT" "$S3_ACCESS_KEY_ID" "$S3_SECRET_ACCESS_KEY" >/dev/null
     mc anonymous set download "rustfs/$S3_BUCKET"
@@ -145,7 +150,7 @@ docker run --rm \
   -e AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
   -e AWS_DEFAULT_REGION="${S3_REGION:-us-east-1}" \
   amazon/aws-cli s3api put-bucket-cors \
-    --bucket "$S3_BUCKET" \
+    --bucket "$PUBLIC_BUCKET" \
     --cors-configuration file:///tmp/cors.json \
     --endpoint-url "$S3_ENDPOINT"
 
@@ -161,4 +166,4 @@ docker run --rm \
     --endpoint-url "$S3_ENDPOINT"
 rm -f "$cors_file"
 
-echo "RustFS buckets are ready: $S3_BUCKET, $PRIVATE_BUCKET"
+echo "RustFS buckets are ready: $PUBLIC_BUCKET, $PRIVATE_BUCKET"

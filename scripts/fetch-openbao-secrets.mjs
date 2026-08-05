@@ -237,6 +237,10 @@ function getMissingKeys(secretName, secretValues) {
       return false;
     }
 
+    if (secretName === "rustfs" && key === "S3_BUCKET" && secretValues.S3_PUBLIC_BUCKET) {
+      return false;
+    }
+
     return !(key in secretValues);
   });
 }

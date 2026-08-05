@@ -4,8 +4,7 @@ import { z } from "zod";
 import { forbidden, unauthorized } from "@/src/lib/server/cms-api";
 import { AuthError, getWriteRoles, requireRole } from "@/src/lib/server/auth";
 import { auditLog, sessionActor } from "@/src/lib/server/audit-log";
-import { env } from "@/src/lib/server/env";
-import { deleteMediaObject } from "@/src/lib/server/s3";
+import { deleteMediaObject, getMediaStorageInfo } from "@/src/lib/server/s3";
 
 const requestSchema = z.object({
   key: z.string().min(1),
@@ -19,12 +18,14 @@ export async function POST(request: Request) {
     const body = requestSchema.parse(await request.json());
     keyForAudit = body.key;
     await deleteMediaObject(body.key);
+    const storage = getMediaStorageInfo();
     auditLog({
       action: "cms.media.delete",
       result: "success",
       ...sessionActor(session),
-      resource: env.S3_BUCKET,
+      resource: storage.bucket,
       target: body.key,
+      metadata: { project: storage.project, keyPrefix: storage.keyPrefix },
     });
 
     return NextResponse.json({ ok: true, key: body.key });

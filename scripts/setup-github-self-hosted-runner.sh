@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-tabeeb09/oi.loftrop.com}"
+GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-tabeeb09/Print-Farm}"
 RUNNER_USER="${RUNNER_USER:-github-runner}"
 RUNNER_ROOT="${RUNNER_ROOT:-/opt/github-runner}"
 RUNNER_NAME="${RUNNER_NAME:-$(hostname)-website-deploy}"

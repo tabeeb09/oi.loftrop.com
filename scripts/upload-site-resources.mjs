@@ -3,6 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
+import {
+  assertStorageProjectConfig,
+  getStorageProjectConfig,
+  toStorageObjectKey,
+} from "./lib/storage-project.mjs";
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function loadEnvFile(filePath) {
@@ -31,11 +37,12 @@ const siteResources = JSON.parse(
   fs.readFileSync(path.join(rootDir, "src", "lib", "resource-schema-data.json"), "utf8"),
 );
 
-const required = ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"];
-const missing = required.filter((key) => !process.env[key]);
+const storage = getStorageProjectConfig();
 
-if (missing.length) {
-  console.error(`Missing S3 config: ${missing.join(", ")}`);
+try {
+  assertStorageProjectConfig(storage, { requirePrivate: false });
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
 
@@ -64,12 +71,12 @@ function resolveLocalPath(localPath) {
 }
 
 const client = new S3Client({
-  endpoint: process.env.S3_ENDPOINT,
-  region: process.env.S3_REGION || "us-east-1",
+  endpoint: storage.endpoint,
+  region: storage.region,
   forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    accessKeyId: storage.accessKeyId,
+    secretAccessKey: storage.secretAccessKey,
   },
 });
 
@@ -93,17 +100,18 @@ for (const resource of siteResources) {
     for (const file of files) {
       const filePath = path.join(localPath, file.name);
       const extension = path.extname(filePath).toLowerCase();
-      const key = `${resource.keyPrefix.replace(/\/+$/, "")}/${file.name}`;
+      const relativeKey = `${resource.keyPrefix.replace(/\/+$/, "")}/${file.name}`;
+      const key = toStorageObjectKey(storage.publicKeyPrefix, relativeKey);
       await client.send(
         new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET,
+          Bucket: storage.publicBucket,
           Key: key,
           Body: fs.createReadStream(filePath),
           ContentType: contentTypes.get(extension) || "application/octet-stream",
         }),
       );
       uploaded += 1;
-      console.log(`Uploaded ${resource.id}/${file.name} -> ${process.env.S3_BUCKET}/${key}`);
+      console.log(`Uploaded ${resource.id}/${file.name} -> ${storage.publicBucket}/${key}`);
     }
 
     continue;
@@ -112,15 +120,17 @@ for (const resource of siteResources) {
   const extension = path.extname(localPath).toLowerCase();
   await client.send(
     new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET,
-      Key: resource.key,
+      Bucket: storage.publicBucket,
+      Key: toStorageObjectKey(storage.publicKeyPrefix, resource.key),
       Body: fs.createReadStream(localPath),
       ContentType: contentTypes.get(extension) || "application/octet-stream",
     }),
   );
 
   uploaded += 1;
-  console.log(`Uploaded ${resource.id} -> ${process.env.S3_BUCKET}/${resource.key}`);
+  console.log(
+    `Uploaded ${resource.id} -> ${storage.publicBucket}/${toStorageObjectKey(storage.publicKeyPrefix, resource.key)}`,
+  );
 }
 
 console.log(`Uploaded ${uploaded} resource(s).`);

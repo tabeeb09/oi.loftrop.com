@@ -9,6 +9,11 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 
+import {
+  assertStorageProjectConfig,
+  getStorageProjectConfig,
+} from "./lib/storage-project.mjs";
+
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function loadEnvFile(filePath) {
@@ -33,27 +38,29 @@ loadEnvFile(path.join(rootDir, ".env.runtime"));
 loadEnvFile(path.join(rootDir, ".env.local"));
 loadEnvFile(path.join(rootDir, ".env.full.local.generated"));
 
-const required = ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY"];
-const missing = required.filter((key) => !process.env[key]);
+const storage = getStorageProjectConfig();
 
-if (missing.length) {
-  console.error(`Missing S3 config: ${missing.join(", ")}`);
+try {
+  assertStorageProjectConfig(storage);
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
 
-const bucket = process.env.S3_BUCKET;
+const publicBucket = storage.publicBucket;
+const privateBucket = storage.privateBucket;
 
 const client = new S3Client({
-  endpoint: process.env.S3_ENDPOINT,
-  region: process.env.S3_REGION || "us-east-1",
+  endpoint: storage.endpoint,
+  region: storage.region,
   forcePathStyle: true,
   credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY_ID,
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+    accessKeyId: storage.accessKeyId,
+    secretAccessKey: storage.secretAccessKey,
   },
 });
 
-async function ensureBucket() {
+async function ensureBucket(bucket) {
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucket }));
     console.log(`RustFS bucket already exists: ${bucket}`);
@@ -63,7 +70,7 @@ async function ensureBucket() {
   }
 }
 
-async function applyCors() {
+async function applyCors(bucket) {
   await client.send(
     new PutBucketCorsCommand({
       Bucket: bucket,
@@ -83,7 +90,7 @@ async function applyCors() {
   console.log(`Applied CORS to RustFS bucket: ${bucket}`);
 }
 
-async function applyPublicReadPolicy() {
+async function applyPublicReadPolicy(bucket) {
   await client.send(
     new PutBucketPolicyCommand({
       Bucket: bucket,
@@ -104,6 +111,11 @@ async function applyPublicReadPolicy() {
   console.log(`Applied public-read policy to RustFS bucket: ${bucket}`);
 }
 
-await ensureBucket();
-await applyCors();
-await applyPublicReadPolicy();
+await ensureBucket(publicBucket);
+await ensureBucket(privateBucket);
+await applyCors(publicBucket);
+await applyCors(privateBucket);
+await applyPublicReadPolicy(publicBucket);
+console.log(
+  `S3 project ready: ${storage.project} public=${publicBucket}/${storage.publicKeyPrefix || "(root)"} private=${privateBucket}/${storage.privateKeyPrefix || "(root)"}`,
+);

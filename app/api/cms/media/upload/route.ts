@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { forbidden, unauthorized } from "@/src/lib/server/cms-api";
 import { AuthError, getWriteRoles, requireRole } from "@/src/lib/server/auth";
 import { auditLog, sessionActor } from "@/src/lib/server/audit-log";
-import { env } from "@/src/lib/server/env";
-import { uploadMediaObject } from "@/src/lib/server/s3";
+import { getMediaPublicUrl, getMediaStorageInfo, uploadMediaObject } from "@/src/lib/server/s3";
 
 export async function POST(request: Request) {
   let keyForAudit: string | null = null;
@@ -28,19 +27,27 @@ export async function POST(request: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     await uploadMediaObject(key, buffer, file.type);
+    const storage = getMediaStorageInfo();
     auditLog({
       action: "cms.media.upload",
       result: "success",
       ...sessionActor(session),
-      resource: env.S3_BUCKET,
+      resource: storage.bucket,
       target: key,
-      metadata: { bytes: buffer.byteLength, contentType: file.type || "application/octet-stream" },
+      metadata: {
+        bytes: buffer.byteLength,
+        contentType: file.type || "application/octet-stream",
+        project: storage.project,
+        keyPrefix: storage.keyPrefix,
+      },
     });
 
     return NextResponse.json({
-      bucket: env.S3_BUCKET,
+      bucket: storage.bucket,
+      project: storage.project,
+      storagePrefix: storage.keyPrefix,
       key,
-      publicUrl: `${(env.NEXT_PUBLIC_MEDIA_BASE_URL ?? env.S3_PUBLIC_ENDPOINT ?? "").replace(/\/+$/, "")}/${env.S3_BUCKET}/${key}`,
+      publicUrl: getMediaPublicUrl(key),
       uploadedVia: "server",
     });
   } catch (error) {
