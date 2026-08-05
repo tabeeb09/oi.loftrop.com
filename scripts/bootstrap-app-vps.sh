@@ -126,6 +126,8 @@ recover_deploy_env_from_container() {
   local container tmp_file
 
   if [[ -f "$DEPLOY_ENV_FILE" ]]; then
+    BOOTSTRAP_RECOVERED_FROM_CONTAINER=1
+    echo "Using existing $DEPLOY_ENV_FILE while OpenBao bootstrap is unavailable."
     return 0
   fi
 
