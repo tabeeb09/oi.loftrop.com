@@ -9,6 +9,8 @@ RUNTIME_ENV_FILE="${RUNTIME_ENV_FILE:-$STATE_DIR/runtime.env}"
 DEPLOY_ENV_FILE="${DEPLOY_ENV_FILE:-$STATE_DIR/deploy.env}"
 BASE_ENV_FILE="${BASE_ENV_FILE:-$STATE_DIR/base.env}"
 BOOTSTRAP_ON_FAILURE="${BOOTSTRAP_ON_FAILURE:-wait}"
+APP_COMPOSE_PROJECT="${APP_COMPOSE_PROJECT:-app}"
+BOOTSTRAP_RECOVERED_FROM_CONTAINER=0
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
@@ -120,6 +122,31 @@ resolve_bootstrap_groups() {
   esac
 }
 
+recover_deploy_env_from_container() {
+  local container tmp_file
+
+  if [[ -f "$DEPLOY_ENV_FILE" ]]; then
+    return 0
+  fi
+
+  container="$(
+    docker ps --format '{{.Names}}' |
+      grep -E "^${APP_COMPOSE_PROJECT}-website-[0-9]+$|^website$" |
+      head -n 1 || true
+  )"
+
+  if [[ -z "$container" ]]; then
+    return 1
+  fi
+
+  tmp_file="$(mktemp)"
+  docker inspect "$container" --format '{{range .Config.Env}}{{println .}}{{end}}' >"$tmp_file"
+  install -m 0600 "$tmp_file" "$DEPLOY_ENV_FILE"
+  rm -f "$tmp_file"
+  BOOTSTRAP_RECOVERED_FROM_CONTAINER=1
+  echo "Recovered $DEPLOY_ENV_FILE from running website container environment."
+}
+
 wait_for_valid_bootstrap() {
   local bootstrap_groups
   bootstrap_groups="$(resolve_bootstrap_groups)"
@@ -144,6 +171,11 @@ wait_for_valid_bootstrap() {
     fi
 
     if [[ "$BOOTSTRAP_ON_FAILURE" == "exit" || "${CI:-}" == "true" ]]; then
+      if recover_deploy_env_from_container; then
+        echo "Continuing with recovered deploy env because OpenBao bootstrap is unavailable."
+        return
+      fi
+
       echo "Bootstrap failed in non-interactive mode. Correct $BOOTSTRAP_ENV_FILE, then rerun." >&2
       exit 1
     fi
@@ -174,6 +206,12 @@ main() {
 
   cd "$PROJECT_ROOT"
   wait_for_valid_bootstrap
+  if [[ "$BOOTSTRAP_RECOVERED_FROM_CONTAINER" == "1" ]]; then
+    echo "Bootstrap reused recovered deploy env."
+    echo "Deploy env:  $DEPLOY_ENV_FILE"
+    return
+  fi
+
   prepare_deploy_env
 
   echo "Bootstrap complete."
